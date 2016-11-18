@@ -1,7 +1,6 @@
 #!/sw/bin/python -O
 
 from numpy import *
-from biggles import *
 
 class Profile(object):
     def __init__(self, filename, suffix="",reticon=False):

@@ -1,0 +1,10 @@
+efonseca@[VERDI]master:~/tempomcmc$  python runmcmc.py -f 1918.par -t 1918.tim -n pulse1918.txt -i 10000 -m 10 -p 20
+{'pulsefile': 'pulse1918.txt', 'toafile': '1918.tim', 'paral': 20, 'stepsize': 1.0, 'seed': 11181, 'steps': 10000, 'parfile': '1918.par', 'mixing': 10}
+Traceback (most recent call last):
+  File "runmcmc.py", line 271, in <module>
+    p.map(run, [(rseed+100*s, MarkovChain) for s in range(px)])
+  File "/usr/lib/python2.7/multiprocessing/pool.py", line 227, in map
+    return self.map_async(func, iterable, chunksize).get()
+  File "/usr/lib/python2.7/multiprocessing/pool.py", line 528, in get
+    raise self._value
+KeyError: 'beta '
