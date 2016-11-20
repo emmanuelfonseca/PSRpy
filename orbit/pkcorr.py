@@ -1,21 +1,11 @@
 #! /usr/bin/python
 
 import astropy.constants as const
+from PSRpy.const import c, G, M_sun, pc, R0, R0_err, v0, v0_err
 from numpy import sin, cos, sqrt
 import numpy as np
 
-# define some constants.
-v_light = const.c.value
-G     = const.G.value
-Msun  = const.M_sun.value
-Tsun  = G * Msun / v_light**3
 d2r   = np.pi / 180
-pc_in = 3.08567758e16
-R0_in = 8.34           # distance to Galactic center, kpc.
-R0err_in = 0.16           # distance error, kpc
-v0_in = 240.           # circular speed of SSB, km/s
-v0err_in = 8.             # circular speed error, km/s
-c = 2.9979e8
 
 def doppler(d,derr,b,l,mu,muerr):
     """
@@ -23,11 +13,8 @@ def doppler(d,derr,b,l,mu,muerr):
     measurement.
     """
     # header stuff.
-    R0, R0err = R0_in, R0err_in 
-    v0, v0err = v0_in, v0err_in 
-    pc = pc_in
-    R0new, R0errnew = np.array([R0,R0err])*pc*1000.   # convert to m
-    v0new, v0errnew = np.array([v0,v0err])*1000.      # convert to m/s
+    R0new, R0_errnew = np.array([R0,R0_err])*pc*1000.   # convert to m
+    v0new, v0_errnew = np.array([v0,v0_err])*1000.      # convert to m/s
     z      = d*sin(b)
     d     *= pc*1000.
     derr  *= pc*1000.
@@ -57,14 +44,11 @@ def distGR(xpbd,xpbderr,pb,b,l,mu,muerr,nmc=500):
     distances. 
     """
     # header stuff.
-    pc = pc_in
-    c = v_light / 1000 / pc
-    R0, R0err = R0_in, R0err_in
-    v0, v0err = v0_in, v0err_in
+    c *= 1. / 1000. / pc
     pi = np.pi
     dist = np.zeros(nmc)
-    R0   = np.random.normal(R0,R0err,size=(nmc))
-    v0   = np.random.normal(v0,v0err,size=(nmc))/pc
+    R0   = np.random.normal(R0,R0_err,size=(nmc))
+    v0   = np.random.normal(v0,v0_err,size=(nmc))/pc
     xpbd = np.random.normal(xpbd,xpbderr,size=(nmc))*1e-12
     mu   = np.random.normal(mu,muerr,size=(nmc))/1000./3600.*d2r/86400./365.25
     pb   = pb*86400.
@@ -87,7 +71,7 @@ def distGR(xpbd,xpbderr,pb,b,l,mu,muerr,nmc=500):
             f  = xpbd[i]+(galpot+galrel-shklov)*pb
             fp = (galpotd+galreld-shklovd)*pb
             d = d-f/fp
-            if (np.fabs(d-db) < 1e-5):
+            if (np.fabs(d-db) < 1e-12):
                 dist[i] = d
                 break
     v0 = v0*pc

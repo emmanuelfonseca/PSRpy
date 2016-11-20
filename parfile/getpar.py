@@ -1,9 +1,9 @@
 #! /usr/bin/python
 
-from decimal import Decimal
-from ..coords import *
 from re import match
-import astropy.constants as const
+from ..const import c, G, M_sun, T_sun
+from astropy.coordinates import SkyCoord
+import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
@@ -16,11 +16,6 @@ par_strings = ['PSR','PSRJ','RAJ','DECJ','EPHEM','ECL','CLK','UNITS','TIMEEPH',
 par_ints    = ['NTOA','NITS','NDDM','EPHVER']
 par_errors  = ['JUMP', 'T2EFAC', 'T2EQUAD', 'TNECORR', 'ECORR']
 
-# re-define some constants.
-c    = const.c.value
-G    = const.G.value
-Msun = const.M_sun.value
-Tsun = G*Msun/c**3
 pi   = np.pi
 
 class readpar():
@@ -116,16 +111,13 @@ class derivepar():
               input parameters (e.g. converting 'ELL1' binary model to 'DD' and generating an 
               equivalent parfile with the latter model).
         """
-        # derive RA and DEC in units of degrees.
-        if (hasattr(inobj,'RAJ')):
-            setattr(self,'RAJdeg',ra2deg(inobj.RAJ))
-        if (hasattr(inobj,'DECJ')):
-            setattr(self,'DECJdeg',dec2deg(inobj.DECJ))
-        # derive Galactic coordinates of source.
+        # derive RA/DEC in degrees, and Galactic coordinates.
         if (hasattr(inobj,'RAJ') and hasattr(inobj,'DECJ')):
-            gal_lat, gal_lon = cel2gal(self.RAJdeg,self.DECJdeg)
-            setattr(self,'gal_b',gal_lat)
-            setattr(self,'gal_l',gal_lon)
+            sc = SkyCoord(inobj.RAJ+' '+inobj.DECJ, unit=(u.hourangle, u.deg))
+            setattr(self, 'RAJdeg', sc.ra.deg)
+            setattr(self, 'DECJdeg', sc.dec.deg)
+            setattr(self, 'gal_b', sc.galactic.b.deg)
+            setattr(self, 'gal_l', sc.galactic.l.deg)
         # derive period, period derivatives and their errors.
         if (hasattr(inobj,'F0')):
             setattr(self,'P0',1/inobj.F0)
@@ -200,14 +192,14 @@ class derivepar():
             # if orthometric SD parameters are used, convert to m2/cosi.
             if (hasattr(inobj,'H3') or hasattr(inobj,'STIG')):
                 h3, stig = inobj.H3, inobj.STIG
-                m2 = h3/stig**3/Tsun
+                m2 = h3/stig**3/T_sun
                 cosi = (1-stig**2)/(1+stig**2)
                 sini = np.sqrt(1-cosi**2)
                 setattr(self,'M2',m2)
                 setattr(self,'SINI',sini)
-            # get mass function, in units of Msun.
+            # get mass function, in units of M_sun.
             a1 = inobj.A1*c 
-            mfunc = (4*pi**2/G*a1**3/pb**2)/Msun     
+            mfunc = (4*pi**2/G*a1**3/pb**2)/M_sun     
             setattr(self,'massfunc',mfunc)
             # compute total mass from mass function, if SHapiro delay is measured.
             if (hasattr(inobj, 'M2') and hasattr(inobj, 'SINI')):
@@ -218,8 +210,7 @@ class derivepar():
             # this assumes that the OMDOT is due to GR.
             if (hasattr(inobj, 'OMDOT') and getattr(inobj, 'OMDOT') > 0):
                 omdot = np.float(inobj.OMDOT) * np.pi / 180. / 365.25 / 86400.
-                Tsun = 4.925490947e-6 
-                mtot_omdot = (omdot * (1 - np.float(ecc)**2) / (3. * Tsun**(2./3.)) / (np.float(pb) / (2. * np.pi))**(-5./3.))**(3./2.)
+                mtot_omdot = (omdot * (1 - np.float(ecc)**2) / (3. * T_sun**(2./3.)) / (np.float(pb) / (2. * np.pi))**(-5./3.))**(3./2.)
                 
 class dmxpar():
     """

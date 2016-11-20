@@ -2,7 +2,6 @@
 
 import astropy.constants as const
 import numpy as np
-import sys
 
 # define some constants.
 c    = const.c.value
@@ -11,7 +10,7 @@ Msun = const.M_sun.value
 Tsun = G*Msun/c**3
 pi   = np.pi
 
-def PBDOT_GR(m1,m2,pb,e):
+def pbdot_GR(m1,m2,pb,e):
     """
     Calculate orbital decay, as expected from GR.
     """
@@ -23,7 +22,7 @@ def PBDOT_GR(m1,m2,pb,e):
     # calculate!
     return A*m1*m2*(m1+m2)**(-1./3.)
 
-def A1DOT_GR(m1, m2, pb, e):
+def xdot_GR(m1, m2, pb, e):
     """
     Calculate rate of orbital decay for semi-major axis.
     Note: XDOT_GR = this rate x SINI.
@@ -34,7 +33,7 @@ def A1DOT_GR(m1, m2, pb, e):
     # calculate!
     return A * m1 * m2**2 / (m1 + m2)
 
-def EDOT_GR(m1, m2, pb, e):
+def edot_GR(m1, m2, pb, e):
     """
     Calculate rate of circularization from GR.
     """
@@ -43,9 +42,9 @@ def EDOT_GR(m1, m2, pb, e):
     A = -304. / 15. * Tsun**(5./3.) * nb**(8./3.) * eterm
     return A * m1 * m2 / (m1 + m2)**(1./3.) * e
 
-def DTHETA_GR(m1, m2, pb, e):
+def dtheta_GR(m1, m2, pb, e):
     """
-    Calculate the DTHETA orbital-shape correction due to GR.
+    Calculate the dtheta orbital-shape correction due to GR.
     """
     nb = 2 * np.pi / pb
     A = (Tsun * nb)**(2./3.)

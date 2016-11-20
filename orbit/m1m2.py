@@ -1,15 +1,11 @@
 #! /usr/bin/python
 
-### PSRGR: a python module for GR-related subroutines.
-### Emmanuel Fonseca, 24 January 2014.
-
 from matplotlib.font_manager import FontProperties
+from PSRpy.const import T_sun, d2r
 from ..parfile import derivepar
-from .pkcorr import doppler
-from ..const import Tsun, d2r
+from pkcorr import doppler
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
 
 font = FontProperties()
 font.set_name('serif')
@@ -17,9 +13,9 @@ font.set_name('serif')
 def om1dot_m1m2(omd,omderr,a1,e,pb,om,m1,npts):
     """Calculate upper/lower bounds of OMDOT curve in the m1-m2 plane."""
     m2omh = ((omd+omderr)*d2r*(1.-e**2)*(pb/2./np.pi)**(5./3.)/3./\
-              Tsun**(2./3.)/86400./365.25)**(3./2.) - m1
+              T_sun**(2./3.)/86400./365.25)**(3./2.) - m1
     m2oml = ((omd-omderr)*d2r*(1.-e**2)*(pb/2./np.pi)**(5./3.)/3./\
-              Tsun**(2./3.)/86400./365.25)**(3./2.) - m1
+              T_sun**(2./3.)/86400./365.25)**(3./2.) - m1
     return m2omh, m2oml
 
 
@@ -29,7 +25,7 @@ def pbdot_m1m2(pbdot,pbdoterr,pb,e,m1,npts):
     m2pbdl = np.zeros(npts)
     fe = 1.+73./24.*e**2+37./96.*e**4
     A  = -192.*np.pi/5.*(pb/2./np.pi)**(-5./3.)*fe*(1.-e**2)**(-7./2.)*\
-         Tsun**(5./3.)
+         T_sun**(5./3.)
     for i in range(npts):
         m2 = 1.
         # use Newton-Raphson method to get upper-bound curve.
@@ -68,9 +64,9 @@ def gamma_m1m2(gam,gamerr,e,pb,m1,npts):
         # use Newton-Raphson method to get upper-bound curve.
         for j in range(100):
             m2b = m2
-            f   = e*(pb/2./np.pi)**(1./3.)*Tsun**(2./3.)*(m1[i]+m2)**(-4./3.)*\
+            f   = e*(pb/2./np.pi)**(1./3.)*T_sun**(2./3.)*(m1[i]+m2)**(-4./3.)*\
                   m2*(m1[i]+2.*m2)
-            fp  = e*(pb/2./np.pi)**(1./3.)*Tsun**(2./3.)*(m1[i]+m2)**(-4./3.)*\
+            fp  = e*(pb/2./np.pi)**(1./3.)*T_sun**(2./3.)*(m1[i]+m2)**(-4./3.)*\
                   (-4./3./(m1[i]+m2)*m2*(m1[i]+m2)+m1[i]+4.*m2) 
             m2  = m2-(gam+gamerr-f)/(-fp)
             if (np.fabs(m2-m2b) < 1e-7):
@@ -81,9 +77,9 @@ def gamma_m1m2(gam,gamerr,e,pb,m1,npts):
         # use Newton-Raphson method to get lower-bound curve.
         for l in range(100):
             m2b = m2
-            f   = e*(pb/2./np.pi)**(1./3.)*Tsun**(2./3.)*(m1[k]+m2)**(-4./3.)*\
+            f   = e*(pb/2./np.pi)**(1./3.)*T_sun**(2./3.)*(m1[k]+m2)**(-4./3.)*\
                   m2*(m1[k]+2.*m2)
-            fp  = e*(pb/2./np.pi)**(1./3.)*Tsun**(2./3.)*(m1[k]+m2)**(-4./3.)*\
+            fp  = e*(pb/2./np.pi)**(1./3.)*T_sun**(2./3.)*(m1[k]+m2)**(-4./3.)*\
                   (-4./3./(m1[k]+m2)*m2*(m1[k]+2.*m2)+m1[k]+4.*m2) 
             m2  = m2-(gam-gamerr-f)/(-fp)
             if (np.fabs(m2-m2b) < 1e-7):
@@ -108,8 +104,8 @@ def s_m1m2(s,serr,x,pb,m1,npts):
         # use Newton-Raphson method to get upper-bound curve.
         for j in range(100):
             m2b = m2
-            f   = x*(pb/2./np.pi)**(-2./3.)*Tsun**(-1./3.)*(m1[i]+m2)**(2./3.)/m2
-            fp  = x*(pb/2./np.pi)**(-2./3.)*Tsun**(-1./3.)*(m1[i]+m2)**(2./3.)/m2*\
+            f   = x*(pb/2./np.pi)**(-2./3.)*T_sun**(-1./3.)*(m1[i]+m2)**(2./3.)/m2
+            fp  = x*(pb/2./np.pi)**(-2./3.)*T_sun**(-1./3.)*(m1[i]+m2)**(2./3.)/m2*\
                   (2./3./(m1[i]+m2)-1./m2)
             m2  = m2-(s+serr-f)/(-fp)
             if (np.fabs(m2-m2b) < 1e-7):
@@ -120,8 +116,8 @@ def s_m1m2(s,serr,x,pb,m1,npts):
         # use Newton-Raphson method to get upper-bound curve.
         for l in range(100):
             m2b = m2
-            f   = x*(pb/2./np.pi)**(-2./3.)*Tsun**(-1./3.)*(m1[k]+m2)**(2./3.)/m2
-            fp  = x*(pb/2./np.pi)**(-2./3.)*Tsun**(-1./3.)*(m1[k]+m2)**(2./3.)/m2*\
+            f   = x*(pb/2./np.pi)**(-2./3.)*T_sun**(-1./3.)*(m1[k]+m2)**(2./3.)/m2
+            fp  = x*(pb/2./np.pi)**(-2./3.)*T_sun**(-1./3.)*(m1[k]+m2)**(2./3.)/m2*\
                   (2./3./(m1[k]+m2)-1./m2)
             m2  = m2-(s-serr-f)/(-fp)
             if (np.fabs(m2-m2b) < 1e-7):
@@ -134,7 +130,7 @@ def om1spin_m1m2(om1s,om1serr,pb,ecc,m1,npts):
     om1serr_lo, om1serr_up = om1serr[0], om1serr[1]
     m2sh = np.zeros(npts)
     m2sl = np.zeros(npts)
-    A = 0.5 * (Tsun)**(2./3.) * (pb / 2 / np.pi)**(-5./3.) / \
+    A = 0.5 * (T_sun)**(2./3.) * (pb / 2 / np.pi)**(-5./3.) / \
         (1 - ecc**2) * 86400 * 365.25
     for i in range(npts):
         m2 = 0.2
@@ -161,7 +157,10 @@ def om1spin_m1m2(om1s,om1serr,pb,ecc,m1,npts):
                 break
     return m2sh, m2sl
 
+# define m1m2 class that uses the above functions when they're set in parfile.
+
 class m1m2():
+
     def __init__(self,inobj,npts=200,om1s=[False,False,False],pkcorr='n'):
         """
         Calculate upper/lower bounds of post-Keplerian (PK)parameters and store 
@@ -227,7 +226,6 @@ class m1m2():
             m2om1sh, m2om1sl = om1spin_m1m2(om1smed, om1serr, pb, e, m1, npts)
             setattr(self,'OM1SPIN_U',m2om1sh)
             setattr(self,'OM1SPIN_L',m2om1sl)
-            #sys.exit()
     def plot(self):
         """Plot availabe m1-m2 data using the matplotlib package."""
         if (hasattr(self,'OMDOT_U') and hasattr(self,'OMDOT_L')):

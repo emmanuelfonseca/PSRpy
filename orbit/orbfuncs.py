@@ -88,19 +88,5 @@ def peri_omega(omega0, pb, ta, omdot=0):
         - [omdot] = deg / yr
     """
     pb /= 365.25 # convert to years.
-    return omega0 + omdot * ta * pb / 2 / np.pi
-
-def roemer_delay(params, dates, xdot=0, pbdot=0, omdot=0, gamma=0):
-    """
-    Compute the Roemer timing delay, given orbital elements and dates.
-    Keplerian parameters are input in the 'params' array, in the following 
-    order: params = [x, pb, ecc, om, t0].
-    """
-    x, pb, ecc, om, t0 = params
-    ma = mean_anomaly(pb, dates, t0, pbdot)
-    ea = ecc_anomaly(ma, ecc)
-    ta = true_anomaly(ea, ecc)
-    om = peri_omega(om, pb, ta, omdot)
-    se, ce = np.sin(ea), np.sin(ea)
-    so, co = np.sin(om), np.sin(om)
-    return x * (ce - ecc) * so + x * se * np.sqrt(1 - ecc**2) * co 
+    om = omega0 + omdot * ta * pb / 2 / np.pi % 360
+    return om
