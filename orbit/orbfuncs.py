@@ -7,28 +7,67 @@ def mean_anomaly(pb, t, t0, pbdot=0):
     """
     Compute mean anomaly, given orbital pb and time parameters.
     """
+    # check if input time is a list or NumPy array.
+    if (isinstance(t, list)):
+        t = np.array(t)
+    elif (isinstance(t, np.ndarray)):
+        pass
+
+    # now do calculation
     dt = t - t0
-    pbdot *= 86400 * 365.25
+    pbdot *= 86400. 
     ma = 360 / pb * (dt - 0.5 * pbdot / pb * dt**2) % 360
+
+
     # make sure that 0 < ma < 360
-    if (ma < 0):
+    if (isinstance(ma, np.ndarray) and np.any(ma < 0)):
+        ma[np.where(ma < 0)] += 360
+    elif (not isinstance(ma, np.ndarray) and ma < 0):
         ma += 360
+
     return ma
 
 def ecc_anomaly(ma, ecc, ea0=0.5):
     """
     Compute eccentric anomaly, given mean anomaly and eccentricity.
     """
-    ea_new = ea0
+    ma *= np.pi / 180
+    ea = 0
+
     # use Newton-Raphson method to obtain best value of EA.
-    for i in range(100):
-        f  = ea_new - ecc * np.sin(ea_new) - ma
-        fp = 1 - ecc * np.cos(ea_new)
-        ea_new -= f / fp
-        if (np.fabs(ea_new - ea0) < 1e-12):
-            break
-        ea0 = ea_new
-    return ea_new * 180 / np.pi
+    if (isinstance(ma, np.ndarray)):
+       count = 0
+       ea = np.zeros(len(ma))
+
+       # compute EA for each MA, separately.
+       for ma0 in  ma:
+           ea_mid = ma0
+           for i in range(100):
+               f  = ea_mid - ecc * np.sin(ea_mid) - ma0
+               fp = 1 - ecc * np.cos(ea_mid)
+               ea_mid -= f / fp
+               if (np.fabs(ea_mid - ea0) < 1e-12):
+                   ea[count] = ea_mid
+                   count += 1
+                   break
+               ea0 = ea_mid
+    else:
+        ea = ma
+        for i in range(100):
+           f  = ea - ecc * np.sin(ea) - ma
+           fp = 1 - ecc * np.cos(ea)
+           ea -= f / fp
+           if (np.fabs(ea - ea0) < 1e-12):
+               break
+           ea0 = ea
+
+    # make sure that 0 < EA < 360
+    if (isinstance(ea, np.ndarray) and np.any(ea < 0)):
+        ea[np.where(ea < 0)] += 360
+    elif (not isinstance(ea, np.ndarray) and ea < 0):
+        ea += 360
+
+    return ea * 180 / np.pi
 
 def true_anomaly(ea, ecc):
     """
