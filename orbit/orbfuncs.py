@@ -1,5 +1,6 @@
 #! /usr/bin/pythin
 
+from PSRpy.const import d2r
 import numpy as np
 import sys
 
@@ -18,7 +19,6 @@ def mean_anomaly(pb, t, t0, pbdot=0):
     pbdot *= 86400. 
     ma = 360 / pb * (dt - 0.5 * pbdot / pb * dt**2) % 360
 
-
     # make sure that 0 < ma < 360
     if (isinstance(ma, np.ndarray) and np.any(ma < 0)):
         ma[np.where(ma < 0)] += 360
@@ -31,7 +31,7 @@ def ecc_anomaly(ma, ecc, ea0=0.5):
     """
     Compute eccentric anomaly, given mean anomaly and eccentricity.
     """
-    ma *= np.pi / 180
+    ma_in = ma * d2r
     ea = 0
 
     # use Newton-Raphson method to obtain best value of EA.
@@ -40,7 +40,7 @@ def ecc_anomaly(ma, ecc, ea0=0.5):
        ea = np.zeros(len(ma))
 
        # compute EA for each MA, separately.
-       for ma0 in  ma:
+       for ma0 in  ma_in:
            ea_mid = ma0
            for i in range(100):
                f  = ea_mid - ecc * np.sin(ea_mid) - ma0
@@ -61,20 +61,31 @@ def ecc_anomaly(ma, ecc, ea0=0.5):
                break
            ea0 = ea
 
+    ea /= d2r
+
     # make sure that 0 < EA < 360
     if (isinstance(ea, np.ndarray) and np.any(ea < 0)):
         ea[np.where(ea < 0)] += 360
     elif (not isinstance(ea, np.ndarray) and ea < 0):
         ea += 360
 
-    return ea * 180 / np.pi
+    return ea 
 
 def true_anomaly(ea, ecc):
     """
     Compute true anomaly, given eccentric anomaly and eccentricity.
     """
-    ta = 2 * np.arctan(np.sqrt((1 + ecc) / (1 - ecc)) * np.tan(ea / 2))
-    return ta * 180 / np.pi
+    ea_in = ea * d2r
+
+    ta = 2 * np.arctan(np.sqrt((1 + ecc) / (1 - ecc)) * np.tan(ea_in / 2)) / d2r
+
+    # make sure that 0 < TA < 360
+    if (isinstance(ta, np.ndarray) and np.any(ta < 0)):
+        ta[np.where(ta < 0)] += 360
+    elif (not isinstance(ta, np.ndarray) and ta < 0):
+        ta += 360
+     
+    return ta 
 
 def peri_omega(omega0, pb, ta, omdot=0):
     """
@@ -87,6 +98,6 @@ def peri_omega(omega0, pb, ta, omdot=0):
         - [ta] = degrees,
         - [omdot] = deg / yr
     """
-    pb /= 365.25 # convert to years.
+    pb_in = pb / 365.25 # convert to years.
     om = omega0 + omdot * ta * pb / 2 / np.pi % 360
     return om
