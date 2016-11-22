@@ -3,6 +3,8 @@
 import numpy as np
 import sys
 
+__all__ = ["Residuals"]
+
 class Residuals():
     """
     A class object that stores and manipulates tempo output. Currently, this module reads in 
@@ -34,7 +36,7 @@ class Residuals():
 
     def plot(self, x='mjd', y='res', reserr=True, info=False, grid=False, 
         resHist=False, savefig=False, figfilename='fig', figfiletype='png', bins=50, 
-        fontsize=15, alpha=1):
+        fontsize=15, alpha=1, years=False):
         """
         Plot data of choice. 
         """
@@ -47,6 +49,7 @@ class Residuals():
         # define axis-label dictionary.
         axlabel = {
             'mjd': 'MJD',
+            'year': 'Year',
             'res': r'Post-fit Residual ($\mu$s)',
             'orb_phase': 'Orbital Phase'
         }
@@ -65,6 +68,10 @@ class Residuals():
         else:
             x_data = getattr(self, x)
             y_data = getattr(self, y)
+            # if desired x-axis is time in years, convert.
+            if (x == 'mjd' and years):
+                x = 'year'
+                x_data = (x_data - 53005.) / 365.25 + 2004.
             if (y == 'res' and reserr):
                 yerr_data = self.uncertainty
                 if (info):
@@ -74,7 +81,7 @@ class Residuals():
                         yerr_data_int = yerr_data[(np.where(info_flags == label))[0]]
                         plt.errorbar(x_data_int, y_data_int, yerr=yerr_data_int, fmt='+')
                 else:
-                    plt.errorbar(x_data, y_faya, yerr=yerr_data, fmt='+')
+                    plt.errorbar(x_data, y_data, yerr=yerr_data, fmt='+')
             elif(y == 'res'):
                 plt.plot(x_data, y_data)
         plt.xlabel(axlabel[x], fontproperties=font, fontsize=fontsize)

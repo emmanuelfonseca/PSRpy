@@ -2,7 +2,7 @@
 
 from matplotlib.font_manager import FontProperties
 from PSRpy.const import T_sun, d2r
-from ..parfile import derivepar
+from ..parfile import DerivePar
 from pkcorr import doppler
 import matplotlib.pyplot as plt
 import numpy as np
@@ -208,7 +208,7 @@ class m1m2():
         if (hasattr(inobj,'PBDOT') and hasattr(inobj,'PBDOTerr')):
             pbdot, pbdoterr = inobj.PBDOT, inobj.PBDOTerr
             if (pkcorr == 'y'):
-                der = derivepar(inobj)
+                der = DerivePar(inobj)
                 b, l, mu, muerr = der.gal_b, der.gal_l, der.mu, der.muerr
                 corr, corr_err = doppler(0.7,0.3,b,l,mu,muerr)
                 corr     *= inobj.PB*86400.*1e12
