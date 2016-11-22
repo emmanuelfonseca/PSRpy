@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-__all__ = ["readpar","derivepar","dmxpar","convertpar"]
+__all__ = ["ReadPar", "DerivePar", "DmxPar", "ConvertPar"]
 
 par_strings = ['PSR','PSRJ','RAJ','DECJ','EPHEM','ECL','CLK','UNITS','TIMEEPH',
                'T2CMETHOD','TZRSITE','CORRECT_TROPOSPHERE','PLANET_SHAPIRO',
@@ -18,7 +18,7 @@ par_errors  = ['JUMP', 'T2EFAC', 'T2EQUAD', 'TNECORR', 'ECORR']
 
 pi   = np.pi
 
-class readpar():
+class ReadPar():
     def __init__(self,infile,efac=1):
         """
         Reads in parfile parameter values, uncertainties and flags as object attributes.
@@ -96,7 +96,8 @@ class readpar():
                     setattr(self,parameter,value+str(np.random.normal(loc=0.,scale=err)))
         setattr(self,parameter+'flag',0)
 
-class derivepar():
+class DerivePar():
+
     def __init__(self,inobj):
         """
         Derive various quantities of potential interest from parfile object.

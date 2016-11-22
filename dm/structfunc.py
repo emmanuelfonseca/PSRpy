@@ -4,7 +4,7 @@ import numpy as np
 import sys
 
 
-def calcstruct(inf,nbinsmax=20,rmbias=False):
+def structfunc(inf,nbinsmax=20,rmbias=False):
   """
   Calculate a structure funtion from DMX measurements.
 
