@@ -34,6 +34,14 @@ class Residuals():
         setattr(self, 'mjd2', data[:, 13])
         setattr(self, 'weight', data[:, 14])
 
+    def average(self):
+        """
+        Average residuals collected during an observing session together. Default is to average all 
+        TOAs residuals and their uncertainties collected over a 24-hour period.
+        """
+
+        return 0
+
     def plot(self, x='mjd', y='res', reserr=True, info=False, grid=False, 
         resHist=False, savefig=False, figfilename='fig', figfiletype='png', bins=50, 
         fontsize=15, alpha=1, years=False):
@@ -98,13 +106,8 @@ class Residuals():
 
         plt.show()
 
-    def stats(self, verbose=False)
-    """
-    Compute statistics for timing residuals.
-    """
-    
-    setattr(self, 'res_rms', np.rms(self.res))
-    setattr(self, 'res_std', np.std(self.res))
-    setattr(self, 'uncertainty_rms', np.rms(self.uncertainty))
-    setattr(self, 'uncertainty_std', np.std(self.uncertainty))
+    def stats(self, verbose=False):
+        """
+        Compute statistics for timing residuals.
+        """
 
