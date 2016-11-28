@@ -213,7 +213,7 @@ class DerivePar():
                 omdot = np.float(inobj.OMDOT) * np.pi / 180. / 365.25 / 86400.
                 mtot_omdot = (omdot * (1 - np.float(ecc)**2) / (3. * T_sun**(2./3.)) / (np.float(pb) / (2. * np.pi))**(-5./3.))**(3./2.)
                 
-class dmxpar():
+class DmxPar():
     """
     Extract and manipulate DMX data from parfile object.
     """
@@ -284,7 +284,7 @@ class dmxpar():
         plt.show()
 
 
-class convertpar():
+class ConvertPar():
     def __init__(self,inobj,binary=None):
         """
         Converts a subset of data in a supplied parfile object to another 
