@@ -12,7 +12,7 @@ class Residuals():
 
     def __init__(self, cfile='c.tmp'):
         """
-        Read in tempo output, store as attributes.
+        Read in tempo output, store as attributes. 
         """
 
         data = np.loadtxt(cfile)
@@ -48,7 +48,8 @@ class Residuals():
         axlabel = {
             'mjd': 'MJD',
             'res': r'Post-fit Residual ($\mu$s)',
-            'orb_phase': 'Orbital Phase'
+            'orb_phase': 'Orbital Phase',
+            'uncertainty': "Post-fit Residual Uncertainty ($\mu$s)"
         }
 
         # if desired, read in info.tmp file.
@@ -89,3 +90,14 @@ class Residuals():
             plt.savefig(figfilename + '.' + figfiletype, fmt=figfiletype)
 
         plt.show()
+
+    def stats(self, verbose=False)
+    """
+    Compute statistics for timing residuals.
+    """
+    
+    setattr(self, 'res_rms', np.rms(self.res))
+    setattr(self, 'res_std', np.std(self.res))
+    setattr(self, 'uncertainty_rms', np.rms(self.uncertainty))
+    setattr(self, 'uncertainty_std', np.std(self.uncertainty))
+
