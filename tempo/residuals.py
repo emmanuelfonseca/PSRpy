@@ -17,6 +17,7 @@ class Residuals():
         Read in tempo output, store as attributes. 
         """
 
+        setattr(self, 'inputfile', cfile)
         data = np.loadtxt(cfile)
         setattr(self, 'daynum', data[:, 0])
         setattr(self, 'res_P', data[:, 1])
@@ -34,13 +35,14 @@ class Residuals():
         setattr(self, 'mjd2', data[:, 13])
         setattr(self, 'weight', data[:, 14])
 
-    def average(self):
+    def average(self, timeavg=1):
         """
         Average residuals collected during an observing session together. Default is to average all 
         TOAs residuals and their uncertainties collected over a 24-hour period.
         """
 
         return 0
+
 
     def plot(self, x='mjd', y='res', reserr=True, info=False, grid=False, 
         resHist=False, savefig=False, figfilename='fig', figfiletype='png', bins=50, 
@@ -91,8 +93,8 @@ class Residuals():
                         plt.errorbar(x_data_int, y_data_int, yerr=yerr_data_int, fmt='+')
                 else:
                     plt.errorbar(x_data, y_data, yerr=yerr_data, fmt='+')
-            elif(y == 'res'):
-                plt.plot(x_data, y_data)
+            else:
+                plt.plot(x_data, y_data, 'b+')
         plt.xlabel(axlabel[x], fontproperties=font, fontsize=fontsize)
         plt.ylabel(axlabel[y], fontproperties=font, fontsize=fontsize)
 
@@ -111,3 +113,15 @@ class Residuals():
         Compute statistics for timing residuals.
         """
 
+        weight = 1 / (self.uncertainty)**2 / np.sum(1 / (self.uncertainty)**2)
+
+        setattr(self, 'Ntoa', len(self.res))
+        setattr(self, 'rms', np.sqrt(np.sum((self.res)**2) / self.Ntoa))
+        setattr(self, 'rms_weighted', np.sqrt(np.sum(weight * (self.res)**2)))
+        setattr(self, 'median_uncertainty', np.median(self.uncertainty))
+
+        if (verbose):
+            print "Residual statistics for {0}".format(self.inputfile)
+            print "    * number of residuals: {0}".format(self.Ntoa)
+            print "    * RMS residual: {0:.3f} microsec".format(self.rms)
+            print "    * ... weighted: {0:.3f} microsec".format(self.rms_weighted)
