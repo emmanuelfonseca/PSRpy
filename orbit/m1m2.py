@@ -159,7 +159,7 @@ def om1spin_m1m2(om1s,om1serr,pb,ecc,m1,npts):
 
 # define m1m2 class that uses the above functions when they're set in parfile.
 
-class m1m2():
+class M1M2():
 
     def __init__(self,inobj,npts=200,om1s=[False,False,False],pkcorr='n'):
         """
