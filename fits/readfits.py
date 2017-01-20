@@ -36,6 +36,11 @@ class ReadFits():
 
         # store key numbers from 'history' binary table extension.
         setattr(self, 't_bin', (hdulist[1].data['TBIN'])[0])
+        dedisp = (hdulist[1].data['DEDISP'])[0]
+        if dedisp:
+            setattr(self, 'dedisp', True)
+        else:
+            setattr(self, 'dedisp', False)
 
         # store key header info, pulsar data from 'subint data' table extension.
         data  = hdulist[4].data['DATA']
@@ -86,8 +91,11 @@ class ReadFits():
             if (ii not in ignore_chans):
                 for jj in range(self.n_ints):
                     curr_prof += self.data[jj, pol, ii, :] / self.n_ints
-                shift_dm = dm_time_delay(self.dm, self.channel_freqs[ii], reference_freq) / period_topo
-                phase_frequency_map[count, :] = ft.fftshift(curr_prof, tau=shift_dm)
+                if (not self.dedisp):
+                    shift_dm = dm_time_delay(self.dm, self.channel_freqs[ii], reference_freq) / period_topo
+                    phase_frequency_map[count, :] = ft.fftshift(curr_prof, tau=shift_dm)
+                else:
+                    phase_frequency_map[count, :] = curr_prof
                 freq_good[count] = self.channel_freqs[ii]
                 count += 1
 
@@ -114,8 +122,12 @@ class ReadFits():
             n_chan_good = 0
             for ll in range(self.n_chan):
                 if (ll not in ignore_chans):
-                    shift_dm = dm_time_delay(self.dm, freq[ll], reference_freq) / period_topo
-                    phase_time_map[kk, :] += ft.fftshift(self.data[kk, 0, ll, :], tau=shift_dm) 
+                    # if not done so already, de-disperse signal.
+                    if (not self.dedisp):
+                        shift_dm = dm_time_delay(self.dm, freq[ll], reference_freq) / period_topo
+                        phase_time_map[kk, :] += ft.fftshift(self.data[kk, 0, ll, :], tau=shift_dm) 
+                    else:
+                        phase_time_map[kk, :] += self.data[kk, 0, ll, :]
                     n_chan_good += 1
             phase_time_map[kk, :] /= n_chan_good
 
