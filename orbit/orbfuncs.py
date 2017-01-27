@@ -6,7 +6,7 @@ import sys
 
 def mean_anomaly(pb, t, t0, pbdot=0):
     """
-    Compute mean anomaly, given orbital pb and time parameters.
+    Computes mean anomaly, given orbital period and time parameters.
     """
     # check if input time is a list or NumPy array.
     if (isinstance(t, list)):
@@ -29,28 +29,34 @@ def mean_anomaly(pb, t, t0, pbdot=0):
 
 def ecc_anomaly(ma, ecc, ea0=0.5):
     """
-    Compute eccentric anomaly, given mean anomaly and eccentricity.
+    Computes eccentric anomaly, given mean anomaly and eccentricity.
     """
     ma_in = ma * d2r
     ea = 0
 
-    # use Newton-Raphson method to obtain best value of EA.
+    # if MA is an array, loop over each entry and apply N-R method.
     if (isinstance(ma, np.ndarray)):
        count = 0
        ea = np.zeros(len(ma))
 
+       # in this case, turn 'ecc' into an array.
+       if (not isinstance(ecc, np.ndarray)):
+           ecc = np.zeros(len(ma)) + ecc
+
        # compute EA for each MA, separately.
-       for ma0 in  ma_in:
+       for ma0, ecc0 in zip(ma_in, ecc):
            ea_mid = ma0
            for i in range(100):
-               f  = ea_mid - ecc * np.sin(ea_mid) - ma0
-               fp = 1 - ecc * np.cos(ea_mid)
+               f  = ea_mid - ecc0 * np.sin(ea_mid) - ma0
+               fp = 1 - ecc0 * np.cos(ea_mid)
                ea_mid -= f / fp
                if (np.fabs(ea_mid - ea0) < 1e-12):
                    ea[count] = ea_mid
                    count += 1
                    break
                ea0 = ea_mid
+
+    # otherwise, do single calculation and leave as scalar.
     else:
         ea = ma
         for i in range(100):
@@ -73,7 +79,7 @@ def ecc_anomaly(ma, ecc, ea0=0.5):
 
 def true_anomaly(ea, ecc):
     """
-    Compute true anomaly, given eccentric anomaly and eccentricity.
+    Computes true anomaly, given eccentric anomaly and eccentricity.
     """
     ea_in = ea * d2r
 
@@ -89,8 +95,8 @@ def true_anomaly(ea, ecc):
 
 def peri_omega(omega0, pb, ta, omdot=0):
     """
-    Compute periastron argument, given initial value, orbital pb, 
-    true anomaly (ta) and periastron advance.
+    Computes periastron argument as a function of time, given initial 
+    value, orbital pb, true anomaly (ta) and periastron advance.
 
     Units of input:
         - [omega0] = degrees,
