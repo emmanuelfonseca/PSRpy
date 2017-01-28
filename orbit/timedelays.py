@@ -1,23 +1,24 @@
 #! /usr/bin/python
 
-from PSRpy.const import au, c, d2r
+from PSRpy.const import au, c, d2r, pc
 import ssbfuncs as ssb
+import orbvectors as ov
 import orbfuncs as o
 import numpy as np
 
-def roemer_delay_ssb(epoch, ecl_beta, ecl_lambda):
+def roemer_delay_ssb(epoch, ecl_b, ecl_l):
     """
     Computes the Roemer timing delay for the Solar System, given a set 
     of ecliptic coordinates.
 
     Inputs:
         - epoch      = epoch where delay is evaluated [MJD]
-        - ecl_beta   = beta [deg]
-        - ecl_lambda = lambda [deg]
+        - ecl_b   = beta [deg]
+        - ecl_l = lambda [deg]
     """
 
     r_earth = ssb.planet_position_ecliptic(epoch)
-    s = ssb.pulsar_position_ecliptic(ecl_beta, ecl_lambda)
+    s = ssb.pulsar_position_ecliptic(ecl_b, ecl_l)
 
     if (isinstance(epoch, np.ndarray)):
         delay = np.zeros(len(epoch))
@@ -30,6 +31,98 @@ def roemer_delay_ssb(epoch, ecl_beta, ecl_lambda):
     else:
         return np.sum(r_earth * s) * au / c
 
+
+def earth_parallax_delay(epoch, ecl_b, ecl_l, d=1):
+    """
+    Computes the Roemer timing delay for the Solar System, given a set 
+    of ecliptic coordinates.
+
+    Inputs:
+        - epoch      = epoch where delay is evaluated [MJD]
+        - ecl_b   = beta [deg]
+        - ecl_l = lambda [deg]
+        - d          = distance [kpc]
+    """
+
+    r_earth = ssb.planet_position_ecliptic(epoch) * au
+    s = ssb.pulsar_position_ecliptic(ecl_b, ecl_l)
+
+    if (isinstance(epoch, np.ndarray)):
+        delay = np.zeros(len(epoch))
+
+        for ii in range(len(epoch)):
+            delay[ii] = np.sum(np.cross(r_earth[:, ii], s)**2)
+
+        return delay / 2 / c / (d * 1000 * pc)
+
+    else:
+        return np.sum(np.cross(r_earth, s)**2) / 2 / c / (d * 1000 * pc) 
+
+def orbital_parallax_delay(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, ecl_l, d=1, basis=2):
+    """
+    Computes the Roemer timing delay for the Solar System, given a set 
+    of ecliptic coordinates.
+
+    Inputs:
+        - epoch      = epoch where delay is evaluated [MJD]
+        - ecl_b   = beta [deg]
+        - ecl_l = lambda [deg]
+        - d          = distance [kpc]
+    """
+
+    r_pulsar = ov.radius_eccentric_orbit(x, pb, ecc, om, t0, epoch, incl, asc, 
+        ecl_b, ecl_l, basis=basis)
+    r_pulsar *= au
+    s = ssb.pulsar_position_ecliptic(ecl_b, ecl_l)
+
+    if (isinstance(epoch, np.ndarray)):
+        delay = np.zeros(len(epoch))
+
+        for ii in range(len(epoch)):
+            delay[ii] = np.sum(np.cross(r_pulsar[:, ii], s)**2)
+
+        return delay / 2 / c / (d * 1000 * pc)
+
+    else:
+        return np.sum(np.cross(r_earth, s)**2) / 2 / c / (d * 1000 * pc)
+
+def annual_orbital_parallax_delay(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, ecl_l, d=1, basis=2):
+    """ 
+    Computes the Roemer timing delay for the Solar System, given a set 
+    of ecliptic coordinates.
+
+    Inputs:
+        - x = projected semimajor axis [lt-s]
+        - pb = orbital period [days]
+        - ecc = eccentricity [  ]
+        - om  = argument of periastron [deg]
+        - t0 = epoch of periastron passage [MJD]
+        - epoch = epoch where delay is evaluated [MJD]
+        - incl = system inclination [deg]
+        - asc = longitude of ascending node [deg]
+        - ecl_b = beta [deg]
+        - ecl_l = lambda [deg]
+        - d = distance [kpc]
+        - basis = basis of coordinate system:
+            * 1 = plane of sky
+            * 2 = ecliptic coordinate system
+    """
+
+    r_earth = ssb.planet_position_ecliptic(epoch) * au
+    r_pulsar = ov.radius_eccentric_orbit(x, pb, ecc, om, t0, epoch, incl, asc, 
+        ecl_b, ecl_l, basis=basis) * au
+    s = ssb.pulsar_position_ecliptic(ecl_b, ecl_l)
+
+    if (isinstance(epoch, np.ndarray)):
+        delay = np.zeros(len(epoch))
+
+        for ii in range(len(epoch)):
+            delay[ii] = np.sum(np.cross(r_pulsar[:, ii], s) * np.cross(r_earth[:, ii], s))
+
+        return delay / 2 / c / (d * 1000 * pc) 
+
+    else:
+        return np.sum(np.cross(r_earth, s) * np.cross(r_pulsar, s)) / 2 / c / (d * 1000 * pc)
 
 def roemer_delay(x, pb, ecc, om, t0, dates, xdot=0, pbdot=0, omdot=0, gamma=0):
     """
