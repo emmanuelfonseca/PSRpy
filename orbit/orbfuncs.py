@@ -7,7 +7,17 @@ import sys
 def mean_anomaly(pb, t, t0, pbdot=0):
     """
     Computes mean anomaly, given orbital period and time parameters.
+
+    Inputs:
+        - pb = orbital period [days]
+        - t = epoch to evaluate angle [MJD]
+        - t0 = reference epoch [MJD]
+        - pbdot = time derivative of orbital period [  ]
+
+    Output:
+        - mean anomaly [deg]
     """
+
     # check if input time is a list or NumPy array.
     if (isinstance(t, list)):
         t = np.array(t)
@@ -30,7 +40,16 @@ def mean_anomaly(pb, t, t0, pbdot=0):
 def ecc_anomaly(ma, ecc, ea0=0.5):
     """
     Computes eccentric anomaly, given mean anomaly and eccentricity.
+
+    Inputs:
+        - ma = mean anomaly [deg]
+        - ecc = orbital eccentricity [  ]
+        - ea0 = initial guess of eccentric anomaly [  ]
+
+    Output:
+        - eccentric anomaly [deg]
     """
+
     ma_in = ma * d2r
     ea = 0
 
@@ -80,9 +99,16 @@ def ecc_anomaly(ma, ecc, ea0=0.5):
 def true_anomaly(ea, ecc):
     """
     Computes true anomaly, given eccentric anomaly and eccentricity.
-    """
-    ea_in = ea * d2r
 
+    Inputs:
+        - ea = eccentric anomaly [deg]
+        - ecc = orbital eccentricity [deg]
+
+    Output:
+        - true anomaly [deg]
+    """
+
+    ea_in = ea * d2r
     ta = 2 * np.arctan(np.sqrt((1 + ecc) / (1 - ecc)) * np.tan(ea_in / 2)) / d2r
 
     # make sure that 0 < TA < 360
@@ -93,17 +119,20 @@ def true_anomaly(ea, ecc):
      
     return ta 
 
-def peri_omega(omega0, pb, ta, omdot=0):
+def peri_omega(om0, pb, ta, omdot=0):
     """
     Computes periastron argument as a function of time, given initial 
     value, orbital pb, true anomaly (ta) and periastron advance.
 
-    Units of input:
-        - [omega0] = degrees,
-        - [pb] = days,
-        - [ta] = degrees,
-        - [omdot] = deg / yr
+    Input:
+        - om0 = periastron argument [deg]
+        - pb = orbital period [days]
+        - ta = true anomaly [deg]
+        - omdot = time derivative of periastron argument [deg / yr]
+
+    Output:
+        - periastron argument [deg]
     """
     pb_in = pb / 365.25 # convert to years.
-    om = omega0 + omdot * ta * pb / 2 / np.pi % 360
+    om = om0 + omdot * ta * pb / 2 / np.pi % 360
     return om

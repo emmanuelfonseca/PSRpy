@@ -12,8 +12,11 @@ def planet_position_ecliptic(epoch, planet='Earth'):
     approximated orbital elements stored in the ssb_data subdirectory.
 
     Inputs:
-        - epoch  = time at which the position is to be evaluated [MJD]
+        - epoch = time at which the position is to be evaluated [MJD]
         - planet = name of object to calculate position [str; default = Earth]
+
+    Output:
+        - position vector [a.u., a.u., a.u.]
     """
 
     Teph0 = 2451525.0 - 2400000.5 
@@ -55,12 +58,15 @@ def planet_position_ecliptic(epoch, planet='Earth'):
 
 def pulsar_position_ecliptic(ecl_beta, ecl_lambda):
     """
-    Returns the components of a unit vector pointing in the direction of a pulsar with 
-    given ecliptic coordinates. 
+    Returns the components of a unit vector pointing in the direction of a pulsar,  
+    given its ecliptic coordinates. 
 
     Inputs:
         - ecl_beta   = beta [deg]
         - ecl_lambda = lambda [deg]
+
+    Output:
+        - Cartesian unit vector
     """
 
     b = ecl_beta * d2r

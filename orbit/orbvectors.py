@@ -24,6 +24,9 @@ def radius_eccentric_orbit(x, pb, ecc, om, t0, t, incl, asc, ecl_b=None, ecl_l=N
         - basis = basis of coordinate system:
             * 1 = plane of sky
             * 2 = ecliptic coordinate system
+
+    Output:
+        - radius vector [a.u., a.u., a.u.]
     """
 
     incl_in = incl * d2r
