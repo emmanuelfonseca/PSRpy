@@ -46,7 +46,7 @@ class Residuals():
 
     def plot(self, x='mjd', y='res', reserr=True, info=False, grid=False, 
         resHist=False, savefig=False, figfilename='fig', figfiletype='png', bins=50, 
-        fontsize=15, alpha=1, years=False):
+        fontsize=15, alpha=1, years=False, ylim=[]):
         """
         Plot data of choice. 
         """
@@ -101,7 +101,10 @@ class Residuals():
         # add grids, if desired.
         if (grid): 
             plt.grid()
-        
+
+        if (len(ylim) == 2):
+            plt.ylim(ylim)
+
         # save figure in png format, if desired.
         if (savefig):
             plt.savefig(figfilename + '.' + figfiletype, fmt=figfiletype)
