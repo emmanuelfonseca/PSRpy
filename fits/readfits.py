@@ -22,35 +22,38 @@ class ReadFits():
         hdulist = fits.open(infile)
 
         # store info from main header of fits file.
-        date, starttime = (hdulist[0].header['DATE-OBS']).split('T')
+        date, starttime = (hdulist['PRIMARY'].header['DATE-OBS']).split('T')
         setattr(self, 'inputfile', infile)
         setattr(self, 'epoch', date)
         setattr(self, 'starttime', starttime)
-        setattr(self, 'projectID', hdulist[0].header['PROJID'])
-        setattr(self, 'telescope', hdulist[0].header['TELESCOP'])
-        setattr(self, 'observer', hdulist[0].header['OBSERVER'])
-        setattr(self, 'source', hdulist[0].header['SRC_NAME'])
-        setattr(self, 'receiver', hdulist[0].header['FRONTEND'])
-        setattr(self, 'backend', hdulist[0].header['BACKEND'])
-        setattr(self, 'mode', hdulist[0].header['OBS_MODE'])
+        setattr(self, 'projectID', hdulist['PRIMARY'].header['PROJID'])
+        setattr(self, 'telescope', hdulist['PRIMARY'].header['TELESCOP'])
+        setattr(self, 'observer', hdulist['PRIMARY'].header['OBSERVER'])
+        setattr(self, 'source', hdulist['PRIMARY'].header['SRC_NAME'])
+        setattr(self, 'receiver', hdulist['PRIMARY'].header['FRONTEND'])
+        setattr(self, 'backend', hdulist['PRIMARY'].header['BACKEND'])
+        setattr(self, 'mode', hdulist['PRIMARY'].header['OBS_MODE'])
 
         # store key numbers from 'history' binary table extension.
-        setattr(self, 't_bin', (hdulist[1].data['TBIN'])[0])
-        dedisp = (hdulist[1].data['DEDISP'])[0]
-        if dedisp:
-            setattr(self, 'dedisp', True)
-        else:
-            setattr(self, 'dedisp', False)
+        setattr(self, 't_bin', (hdulist['HISTORY'].data['TBIN'])[0])
+        setattr(self, 'dedisp', hdulist['HISTORY'].data['DEDISP'])
 
         # store key header info, pulsar data from 'subint data' table extension.
-        data  = hdulist[4].data['DATA']
-        setattr(self, 'data', data)
-        setattr(self, 'channel_freqs', np.array((hdulist[4].data['DAT_FREQ'])[0, :]))
+        data  = hdulist['SUBINT'].data['DATA']
+        scale = hdulist['SUBINT'].data['DAT_SCL']
+        offset = hdulist['SUBINT'].data['DAT_OFFS']
+        setattr(self, 'scale', np.array(scale, dtype=np.float32))
+        setattr(self, 'offset', np.array(offset, dtype=np.float32))
+        setattr(self, 'channel_freqs', np.array((hdulist['SUBINT'].data['DAT_FREQ'])[0, :]))
         setattr(self, 'n_ints', len(data[:, 0, 0 ,0]))
-        setattr(self, 'n_bins', hdulist[4].header['NBIN'])
-        setattr(self, 'n_chan', hdulist[4].header['NCHAN'])
-        setattr(self, 'n_pol', hdulist[4].header['NPOL'])
-        setattr(self, 'dm', hdulist[4].header['DM'])
+        setattr(self, 'n_bins', hdulist['SUBINT'].header['NBIN'])
+        setattr(self, 'n_bits', hdulist['SUBINT'].header['NBITS'])
+        setattr(self, 'n_chan', hdulist['SUBINT'].header['NCHAN'])
+        setattr(self, 'n_pol', hdulist['SUBINT'].header['NPOL'])
+        setattr(self, 'signint', hdulist['SUBINT'].header['SIGNINT'])
+        setattr(self, 'dm', hdulist['SUBINT'].header['DM'])
+
+        setattr(self, 'data', np.array(data, dtype=np.float))
 
     def info(self):
         """
@@ -66,7 +69,52 @@ class ReadFits():
         print "    * Backend: {0}".format(self.backend)
         print "    * Mode: {0}".format(self.mode)
 
-    def heatmap_phase_frequency(self, pol=0, reference_freq=430., ignore_chans=[], ignore_subints=[]):
+    def dedisperse(self, reference_freq=430.):
+        """
+        De-disperses fold-mode data in given fits file.
+        """
+
+        period_topo = self.t_bin * self.n_bins
+        shift_dm = 0.
+
+        # loop over polarization, channel and subint.
+
+        for pol in range(self.n_pol):
+            freq_idx = 0
+            for freq in self.channel_freqs:
+                # compute DM time delay.
+                shift_dm = dm_time_delay(self.dm, freq, reference_freq) / period_topo
+                for subint in range(self.n_ints):
+                    # dedisperse by shifting to common phase.
+                    self.data[subint, pol, freq_idx, :] = ft.fftshift(self.data[subint, pol, freq_idx, :], tau=shift_dm)
+                freq_idx += 1
+
+    def remove_baseline(self, phase_range=[0.7, 0.8]):
+        """
+        Removes non-zero baseline, such that off-pulse RMS intensity is zero.
+        """
+        
+        pulse_phase = np.linspace(0, self.n_bins-1, num=self.n_bins) / np.float(self.n_bins)
+        bl_idx = np.where(np.logical_and(pulse_phase >= phase_range[0], pulse_phase <= phase_range[1]))[0]
+
+        for pol in range(self.n_pol):
+            for freq in range(self.n_chan):
+                for subint in range(self.n_ints):
+                    self.data[subint, pol, freq, :] -= np.mean(self.data[subint, pol, freq, bl_idx])
+
+    def rescale(self):
+        """
+        Re-scales data given the scale and offset parameters.
+        """
+        
+        for pol in range(self.n_pol):
+            for freq in range(self.n_chan):
+                for subint in range(self.n_ints):
+                    self.data[subint, pol, freq, :] *= self.scale[subint, pol * self.n_chan + freq]
+                    self.data[subint, pol, freq, :] += self.offset[subint, pol * self.n_chan + freq]
+
+    def heatmap_phase_frequency(self, pol=0, reference_freq=430., dedisp=False, rescale=False,
+                                rm_baseline=False, ignore_chans=[], ignore_subints=[]):
         """
         Computes full-sum heat map in frequency and orbital phase.
 
@@ -81,27 +129,31 @@ class ReadFits():
             - phase_frequency_map : NumPy array of signal, with shape (n_freq_good x n_bins)
         """
 
-        period_topo = self.t_bin * self.n_bins
         phase_frequency_map = np.zeros((self.n_chan - len(ignore_chans), self.n_bins))
         freq_good = np.zeros(self.n_chan - len(ignore_chans))
         count = 0
+
+        if dedisp:
+            self.dedisperse()
+
+        if rescale:
+            self.rescale()
+
+        if rm_baseline:
+            self.remove_baseline()
 
         for ii in range(self.n_chan):
             curr_prof = np.zeros(self.n_bins)
             if (ii not in ignore_chans):
                 for jj in range(self.n_ints):
-                    curr_prof += self.data[jj, pol, ii, :] / self.n_ints
-                if (not self.dedisp):
-                    shift_dm = dm_time_delay(self.dm, self.channel_freqs[ii], reference_freq) / period_topo
-                    phase_frequency_map[count, :] = ft.fftshift(curr_prof, tau=shift_dm)
-                else:
-                    phase_frequency_map[count, :] = curr_prof
+                    curr_prof = np.array(self.data[jj, pol, ii, :]) / self.n_ints
+                    phase_frequency_map[count, :] += curr_prof
                 freq_good[count] = self.channel_freqs[ii]
                 count += 1
 
         return freq_good, phase_frequency_map
 
-    def heatmap_phase_time(self, pol=0, reference_freq=430., ignore_chans=[], ignore_subints=[]):
+    def heatmap_phase_time(self, pol=0, reference_freq=430., ignore_chans=[], ignore_subints=[], dedisp=True, rescale=True, rm_baseline=True):
         """
         Computes full-sum heat map in time and pulse phase.
 
@@ -115,25 +167,30 @@ class ReadFits():
             - phase_time_map : NumPy array of signal, with shape (n_ints x n_bins)
         """
 
-        phase_time_map = np.zeros((n_ints, n_bins))
+        phase_time_map = np.zeros((self.n_ints, self.n_bins))
         period_topo = self.t_bin * self.n_bins
+
+        if dedisp:
+            self.dedisperse()
+
+        if rescale:
+            self.rescale()
+
+        if rm_baseline:
+            self.remove_baseline()
 
         for kk in range(self.n_ints):
             n_chan_good = 0
             for ll in range(self.n_chan):
                 if (ll not in ignore_chans):
-                    # if not done so already, de-disperse signal.
-                    if (not self.dedisp):
-                        shift_dm = dm_time_delay(self.dm, freq[ll], reference_freq) / period_topo
-                        phase_time_map[kk, :] += ft.fftshift(self.data[kk, 0, ll, :], tau=shift_dm) 
-                    else:
-                        phase_time_map[kk, :] += self.data[kk, 0, ll, :]
+                    phase_time_map[kk, :] += self.data[kk, 0, ll, :]
                     n_chan_good += 1
             phase_time_map[kk, :] /= n_chan_good
 
         return phase_time_map
 
-    def full_summed_profile(self, pol=0, reference_freq=430., ignore_chans=[], ignore_subints=[]):
+    def full_summed_profiles(self, reference_freq=430., dedisp=True, rm_baseline=True, rescale=True, 
+                             ignore_chans=[], ignore_subints=[]):
         """
         Computes full-sum heat map in time and pulse phase.
 
@@ -147,11 +204,21 @@ class ReadFits():
             - phase_time_map : NumPy array of signal, with shape (n_ints x n_bins)
         """
 
-        full_sum_profile = np.zeros(self.n_bins)
-        freqs, heat_map = self.heatmap_phase_frequency(pol=pol, reference_freq=reference_freq, 
-                                                       ignore_chans=ignore_chans, ignore_subints=ignore_subints)
+        full_sum_profiles = np.zeros((self.n_bins, self.n_pol))
 
-        for kk in range(len(freqs)):
-            full_sum_profile += heat_map[kk, :]
+        if dedisp:
+            self.dedisperse()
 
-        return full_sum_profile
+        if rescale:
+            self.rescale()
+
+        if rm_baseline:
+            self.remove_baseline()
+
+        for pol in range(self.n_pol):
+            for freq in range(self.n_chan):
+                for subint in range(self.n_ints):
+                    full_sum_profiles[:, pol] += self.data[subint, pol, freq, :] 
+
+
+        return full_sum_profiles / np.float(self.n_chan * self.n_ints)
