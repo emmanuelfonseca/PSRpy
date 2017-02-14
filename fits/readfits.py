@@ -134,7 +134,7 @@ class ReadFits():
         count = 0
 
         if dedisp:
-            self.dedisperse()
+            self.dedisperse(reference_freq=reference_freq)
 
         if rescale:
             self.rescale()
@@ -171,7 +171,7 @@ class ReadFits():
         period_topo = self.t_bin * self.n_bins
 
         if dedisp:
-            self.dedisperse()
+            self.dedisperse(reference_freq=reference_freq)
 
         if rescale:
             self.rescale()
