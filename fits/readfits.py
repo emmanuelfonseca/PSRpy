@@ -89,6 +89,31 @@ class ReadFits():
                     self.data[subint, pol, freq_idx, :] = ft.fftshift(self.data[subint, pol, freq_idx, :], tau=shift_dm)
                 freq_idx += 1
 
+    def downsample(self, freqs, chan_data, new_bins, pol=0):
+        """
+        Downsamples each sub-integration to a new number of bins.
+
+        TODO: re-write this so that it directly edits the fits object.
+        """
+
+        factor = self.n_bins / new_bins
+
+        if (float(factor).is_integer()):
+            chan_data_downsampled = np.zeros((len(freqs), new_bins))      
+
+            for freq in range(len(freqs)):
+                cbin = 0
+                for pbin in range(new_bins):
+                    chan_data_downsampled[freq, pbin] = np.mean(chan_data[freq, cbin:(pbin+1)*factor])
+                    cbin += factor
+
+            return chan_data_downsampled
+
+        else:
+        
+            print "WARNING: requested bin number not even number! Proceeding with original data..."
+            return chan_data
+
     def remove_baseline(self, phase_range=[0.7, 0.8]):
         """
         Removes non-zero baseline, such that off-pulse RMS intensity is zero.
