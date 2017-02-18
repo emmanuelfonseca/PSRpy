@@ -103,7 +103,7 @@ def orbital_parallax_delay(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, ecl_l, d
         return delay / 2 / c / (d * 1000 * pc)
 
     else:
-        return np.sum(np.cross(r_earth, s)**2) / 2 / c / (d * 1000 * pc)
+        return np.sum(np.cross(r_pulsar, s)**2) / 2 / c / (d * 1000 * pc)
 
 def annual_orbital_parallax_delay(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, ecl_l, d=1, basis=2):
     """ 
