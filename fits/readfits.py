@@ -138,8 +138,18 @@ class ReadFits():
                     self.data[subint, pol, freq, :] *= self.scale[subint, pol * self.n_chan + freq]
                     self.data[subint, pol, freq, :] += self.offset[subint, pol * self.n_chan + freq]
 
-    def heatmap_phase_frequency(self, pol=0, reference_freq=430., dedisp=False, rescale=False,
-                                rm_baseline=False, ignore_chans=[], ignore_subints=[]):
+    def shift_phase(self, shift=0.2):
+        """
+        Shifts all profiles in pulse phase.
+        """
+
+        for pol in range(self.n_pol):
+            for freq in range(self.n_chan):
+                for subint in range(self.n_ints):
+                    self.data[subint, pol, freq, :] = ft.fftshift(self.data[subint, pol, freq, :], tau=shift)
+
+    def heatmap_phase_frequency(self, pol=0, reference_freq=430., ignore_chans=[], ignore_subints=[], 
+                                dedisp=False, rescale=False, rm_baseline=False, shift=False):
         """
         Computes full-sum heat map in frequency and orbital phase.
 
@@ -167,6 +177,9 @@ class ReadFits():
         if rm_baseline:
             self.remove_baseline()
 
+        if shift:
+            self.shift_phase()
+
         for ii in range(self.n_chan):
             curr_prof = np.zeros(self.n_bins)
             if (ii not in ignore_chans):
@@ -178,7 +191,8 @@ class ReadFits():
 
         return freq_good, phase_frequency_map
 
-    def heatmap_phase_time(self, pol=0, reference_freq=430., ignore_chans=[], ignore_subints=[], dedisp=True, rescale=True, rm_baseline=True):
+    def heatmap_phase_time(self, pol=0, reference_freq=430., ignore_chans=[], ignore_subints=[], 
+                           dedisp=False, rescale=False, rm_baseline=False, shift=False):
         """
         Computes full-sum heat map in time and pulse phase.
 
@@ -214,8 +228,8 @@ class ReadFits():
 
         return phase_time_map
 
-    def full_summed_profiles(self, reference_freq=430., dedisp=True, rm_baseline=True, rescale=True, 
-                             ignore_chans=[], ignore_subints=[]):
+    def full_summed_profiles(self, reference_freq=430., ignore_chans=[], ignore_subints=[], dedisp=False,  
+                             rm_baseline=False, rescale=False, shift=False):
         """
         Computes full-sum heat map in time and pulse phase.
 
@@ -239,6 +253,9 @@ class ReadFits():
 
         if rm_baseline:
             self.remove_baseline()
+
+        if shift:
+            self.shift_phase()
 
         for pol in range(self.n_pol):
             for freq in range(self.n_chan):

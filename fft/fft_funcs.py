@@ -50,15 +50,21 @@ def fftfit(data_prof, tmp_prof, tolerance=1e-12):
     c, f_best = 0, 0
     a = (phs_array[np.where(A7vals == max(A7vals))])[0]
     b = (phs_array[np.where(A7vals == min(A7vals))])[0]
+    sign = np.sign([a, b])
 
-    while (np.fabs(b - a) > tolerance):
-        c = (a + b) / 2
-        f_best = tay92_equation_A7(c, amp_tmp, amp_dat, phs_tmp, phs_dat, k_tmp)
+    if (sign[0] == sign[1]):
+        pass
 
-        if (f_best < 0.):
-            b = c
-        else:
-            a = c
+    else:
+        while (np.fabs(b - a) > tolerance):
+            print a, b
+            c = (a + b) / 2
+            f_best = tay92_equation_A7(c, amp_tmp, amp_dat, phs_tmp, phs_dat, k_tmp)
+
+            if (f_best < 0.):
+                b = c
+            else:
+                a = c
 
     best_shift = c
     best_scale = tay92_equation_A9(best_shift, amp_tmp, amp_dat, phs_tmp, phs_dat, k_tmp)
@@ -74,7 +80,7 @@ def fftshift(prof, tau=0., scale=1.0):
     angf = np.angle(ftp)
     kf   = np.linspace(0., len(ftp)-1., num=len(ftp))
 
-    return np.fft.irfft(ampf * np.exp (1j * (angf + kf * (tau * 2 * np.pi))) / scale)
+    return np.fft.irfft(ampf * np.exp (1j * (angf + kf * (tau * 2 * np.pi))) * scale)
 
 def diffprof(data_prof, tmp_prof):
     """
@@ -83,6 +89,6 @@ def diffprof(data_prof, tmp_prof):
     """
 
     shift, fac = fftfit(data_prof, tmp_prof)
-    data_prof_shifted = fftshift(data_prof, tau=shift, scale=fac)
+    tmp_prof_shifted = fftshift(tmp_prof, tau=shift, scale=fac)
     
-    return data_prof_shifted - tmp_prof
+    return data_prof - tmp_prof_shifted
