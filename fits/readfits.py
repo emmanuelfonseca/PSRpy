@@ -171,14 +171,14 @@ class ReadFits():
         if dedisp:
             self.dedisperse(reference_freq=reference_freq)
 
+        if shift:
+            self.shift_phase(shift_by)
+
         if rescale:
             self.rescale()
 
         if rm_baseline:
             self.remove_baseline()
-
-        if shift:
-            self.shift_phase(shift_by)
 
         for ii in range(self.n_chan):
             curr_prof = np.zeros(self.n_bins)
@@ -248,14 +248,14 @@ class ReadFits():
         if dedisp:
             self.dedisperse()
 
+        if shift:
+            self.shift_phase(shift_by)
+
         if rescale:
             self.rescale()
 
         if rm_baseline:
             self.remove_baseline()
-
-        if shift:
-            self.shift_phase(shift_by)
 
         for pol in range(self.n_pol):
             for freq in range(self.n_chan):
