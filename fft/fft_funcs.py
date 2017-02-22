@@ -50,21 +50,15 @@ def fftfit(data_prof, tmp_prof, tolerance=1e-12):
     c, f_best = 0, 0
     a = (phs_array[np.where(A7vals == max(A7vals))])[0]
     b = (phs_array[np.where(A7vals == min(A7vals))])[0]
-    sign = np.sign([a, b])
+    
+    while (np.fabs(b - a) > tolerance):
+        c = (a + b) / 2
+        f_best = tay92_equation_A7(c, amp_tmp, amp_dat, phs_tmp, phs_dat, k_tmp)
 
-    if (sign[0] == sign[1]):
-        pass
-
-    else:
-        while (np.fabs(b - a) > tolerance):
-            print a, b
-            c = (a + b) / 2
-            f_best = tay92_equation_A7(c, amp_tmp, amp_dat, phs_tmp, phs_dat, k_tmp)
-
-            if (f_best < 0.):
-                b = c
-            else:
-                a = c
+        if (f_best < 0.):
+            b = c
+        else:
+            a = c
 
     best_shift = c
     best_scale = tay92_equation_A9(best_shift, amp_tmp, amp_dat, phs_tmp, phs_dat, k_tmp)
@@ -75,6 +69,7 @@ def fftshift(prof, tau=0., scale=1.0):
     """
     A function that shifts an input profile by an amount tau in the Fourier domain.
     """
+
     ftp = nf.rfft(prof)
     ampf = np.absolute(ftp)
     angf = np.angle(ftp)
@@ -89,6 +84,6 @@ def diffprof(data_prof, tmp_prof):
     """
 
     shift, fac = fftfit(data_prof, tmp_prof)
-    tmp_prof_shifted = fftshift(tmp_prof, tau=shift, scale=fac)
+    tmp_prof_shifted = fftshift(tmp_prof, tau=-shift, scale=fac)
     
     return data_prof - tmp_prof_shifted
