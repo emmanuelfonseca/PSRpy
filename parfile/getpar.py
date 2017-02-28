@@ -191,8 +191,13 @@ class DerivePar():
             else:
                 ecc = inobj.E
             # if orthometric SD parameters are used, convert to m2/cosi.
-            if (hasattr(inobj,'H3') or hasattr(inobj,'STIG')):
-                h3, stig = inobj.H3, inobj.STIG
+            if hasattr(inobj,'H3'):
+                h3 = inobj.H3
+                stig = 0.
+                if hasattr(inobj, 'STIG'):
+                    stig = inobj.STIG
+                elif hasattr(inob, 'VARSIGMA'):
+                    stig = inobj.VARSIGMA
                 m2 = h3/stig**3/T_sun
                 cosi = (1-stig**2)/(1+stig**2)
                 sini = np.sqrt(1-cosi**2)
