@@ -47,7 +47,7 @@ def s_GR(m1, m2, pb, x):
     """
 
     pb_in = pb * 86400
-    A = x * (pb / 2 / pi)**(-2./3.) * T_sun**(-1./3.)
+    A = x * (pb_in / 2 / pi)**(-2./3.) * T_sun**(-1./3.)
     return A * (m1 + m2)**(2./3.) / m2
 
 def xdot_GR(m1, m2, pb, e):
