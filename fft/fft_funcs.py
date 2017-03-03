@@ -46,12 +46,16 @@ def fftfit(data_prof, tmp_prof, tolerance=1e-12):
         A7vals[count] = tay92_equation_A7(phs, amp_tmp[1:], amp_dat[1:], phs_tmp[1:], phs_dat[1:], k_tmp[1:])
         count += 1
 
-    # implement Brent's method for finding the zero to Equation A7.
-
     c, f_best = 0, 0
     a = (phs_array[np.where(A7vals == max(A7vals))])[0]
     b = (phs_array[np.where(A7vals == min(A7vals))])[0]
 
+    # if shift is ~0, then the quantity (a - b) is negative.
+    # this messes up the following method, so rotate b backwards by one cycle.
+    if ((a - b) < 0.):
+        b -= 1.
+
+    # implement Brent's method for finding the zero to Equation A7.
     while (np.fabs(b - a) > tolerance):
         c = (a + b) / 2
         f_best = tay92_equation_A7(c, amp_tmp[1:], amp_dat[1:], phs_tmp[1:], phs_dat[1:], k_tmp[1:])
@@ -91,3 +95,32 @@ def diffprof(data_prof, tmp_prof):
     tmp_prof_shifted = fftshift(tmp_prof, tau=-shift, scale=fac, baseline=baseline)
     
     return data_prof - tmp_prof_shifted
+
+def fftfit_err(data_prof, tmp_prof, tau=0., scale=1.):
+    """
+    Estimates the uncertainties in the fftfit parameters.
+    """
+
+    tmp_fft = nf.rfft(tmp_prof)
+    amp_tmp = np.absolute(tmp_fft)
+    phs_tmp = np.angle(tmp_fft)
+
+    dat_fft = nf.rfft(data_prof)
+    amp_dat = np.absolute(dat_fft)
+    phs_dat = np.angle(dat_fft)
+    k = np.linspace(0, len(amp_dat)-1, num=len(amp_dat))
+
+    diff = diffprof(data_prof, tmp_prof)
+    diff_rms_sq = np.sum(diff**2) / len(diff)
+
+    # compute Equations A10 and A11 from Taylor (1992).
+    var_b = diff_rms_sq / (2 * scale * np.sum(k[1:]**2 * amp_tmp[1:] * amp_dat[1:] * \
+            np.cos(phs_tmp[1:] - phs_dat[1:] + k[1:] * (tau * 2 * np.pi))))
+    sig_scale = np.sqrt(var_b)
+    var_t = diff_rms_sq / (2 * np.sum(amp_dat[1:]**2))
+    sig_shift = np.sqrt(var_t)
+
+    # propagate uncertainty in scale to get uncertainty in baseline. 
+    sig_offset = sig_scale * amp_tmp[0] / len(data_prof)
+    
+    return sig_offset, sig_shift, sig_scale
