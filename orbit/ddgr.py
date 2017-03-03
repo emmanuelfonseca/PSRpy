@@ -34,6 +34,22 @@ def pbdot_GR(m1, m2, pb, e):
     A  = -192 * pi / 5 * (pb_in / 2 / pi)**(-5./3.) * fe * T_sun**(5./3.)
     return A*m1*m2*(m1+m2)**(-1./3.)
 
+def r_GR(m2):
+    """
+    Calculates Shapiro 'range' parameter, as expected from GR.
+    """
+
+    return T_sun * m2
+
+def s_GR(m1, m2, pb, x):
+    """
+    Calculates Shapiro 'shape' parameter, as expected from GR / mass function.
+    """
+
+    pb_in = pb * 86400
+    A = x * (pb / 2 / pi)**(-2./3.) * T_sun**(-1./3.)
+    return A * (m1 + m2)**(2./3.) / m2
+
 def xdot_GR(m1, m2, pb, e):
     """
     Calculates rate of orbital decay for semi-major axis.
@@ -68,6 +84,23 @@ def precession_GR(m1, m2, pb, e):
     """
     A = (2 * np.pi / pb)**(5./3.) * T_sun**(2./3.) / (1 - e**2)
     return A * m2 * (4 * m1 + 3 * m2) / 2 / (m1 + m2)**(4./3.)
+
+# compute orthometric terms.
+
+def stig_GR(sini):
+    """
+    Calculates orthometric parameterization of inclination.
+    """
+
+    cosi = np.sqrt(1 - sini**2)
+    return sini / (1 + cosi)
+
+def h3_GR(m2, sini):
+    """
+    Calculates orthometric parameter "H3" in terms of mass and inclination.
+    """
+
+    return T_sun * m2 * stig_GR(sini)**3
 
 # compute terms due to rotational aberration.
 

@@ -1,6 +1,6 @@
 #! /usr/bin/pythin
 
-from PSRpy.const import d2r
+from PSRpy.const import d2r, T_sun
 import numpy as np
 import sys
 
@@ -124,7 +124,7 @@ def peri_omega(om0, pb, ta, omdot=0):
     Computes periastron argument as a function of time, given initial 
     value, orbital pb, true anomaly (ta) and periastron advance.
 
-    Input:
+    Inputs:
         - om0 = periastron argument [deg]
         - pb = orbital period [days]
         - ta = true anomaly [deg]
@@ -136,3 +136,18 @@ def peri_omega(om0, pb, ta, omdot=0):
     pb_in = pb / 365.25 # convert to years.
     om = om0 + omdot * ta * pb / 2 / np.pi % 360
     return om
+
+def mass_function(pb, x):
+    """
+    Computes Keplerian mass function, given projected size and orbital period.
+
+    Inputs:
+        - pb = orbital period [days]
+        - x = projected semimajor axis [lt-s]
+
+    Output:
+        - mass function [solar mass]
+    """
+
+    nb = 2 * np.pi / pb / 86400
+    return nb**2 * x**3 / T_sun
