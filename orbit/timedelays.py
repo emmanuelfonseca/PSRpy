@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-from PSRpy.const import au, c, d2r, pc
+from PSRpy.const import au, c, d2r, pc, T_sun
 import ssbfuncs as ssb
 import orbvectors as ov
 import orbfuncs as o
@@ -12,8 +12,8 @@ def roemer_delay_ssb(epoch, ecl_b, ecl_l):
     of ecliptic coordinates.
 
     Inputs:
-        - epoch      = epoch where delay is evaluated [MJD]
-        - ecl_b   = beta [deg]
+        - epoch = epoch where delay is evaluated [MJD]
+        - ecl_b = beta [deg]
         - ecl_l = lambda [deg]
 
     Output:
@@ -35,7 +35,7 @@ def roemer_delay_ssb(epoch, ecl_b, ecl_l):
         return np.sum(r_earth * s) * au / c
 
 
-def earth_parallax_delay(epoch, ecl_b, ecl_l, d=1):
+def earth_parallax_delay(epoch, ecl_b, ecl_l, parallax):
     """
     Computes the annual-parallax timing delay for the Earth, given a set 
     of ecliptic coordinates and distance measure.
@@ -59,10 +59,10 @@ def earth_parallax_delay(epoch, ecl_b, ecl_l, d=1):
         for ii in range(len(epoch)):
             delay[ii] = np.sum(np.cross(r_earth[:, ii], s)**2)
 
-        return delay / 2 / c / (d * 1000 * pc)
+        return delay * (parallax * d2r / 1000 / 3600) / 2 / c / au
 
     else:
-        return np.sum(np.cross(r_earth, s)**2) / 2 / c / (d * 1000 * pc) 
+        return np.sum(np.cross(r_earth, s)**2) * (parallax * d2r / 1000 / 3600) / 2 / c / au
 
 def orbital_parallax_delay(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, ecl_l, d=1, basis=2):
     """
@@ -146,7 +146,7 @@ def annual_orbital_parallax_delay(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, e
     else:
         return np.sum(np.cross(r_earth, s) * np.cross(r_pulsar, s)) / 2 / c / (d * 1000 * pc)
 
-def pulsar_roemer_delay(x, pb, ecc, om, t0, dates, xdot=0, pbdot=0, omdot=0, gamma=0):
+def pulsar_roemer_delay(dates, x, pb, ecc, om, t0, xdot=0, pbdot=0, omdot=0, gamma=0):
     """
     Computes the Roemer timing delay for a pulsar-binary sustem, given the 
     orbital elements and dates. 
@@ -174,3 +174,31 @@ def pulsar_roemer_delay(x, pb, ecc, om, t0, dates, xdot=0, pbdot=0, omdot=0, gam
     se, ce = np.sin(ea * d2r), np.cos(ea * d2r)
     so, co = np.sin(om * d2r), np.cos(om * d2r)
     return x * (ce - ecc) * so + x * se * np.sqrt(1 - ecc**2) * co
+
+def pulsar_shapiro_delay(dates, pb, ecc, om, t0, m2, sini, pbdot=0, omdot=0):
+    """
+    Computes the Shapiro timing delay for a pulsar-binary sustem, given the 
+    orbital elements and dates. 
+
+    Inputs:
+        - pb = orbital period [days]
+        - ecc = eccentricity [  ]
+        - om  = argument of periastron [deg]
+        - t0 = epoch of periastron passage [MJD] 
+        - m2 = companion mass [M_sun]
+        - sini = sine of inclination angle [  ]
+        - dates = epochs to evaluate delay [MJD]
+        - pbdot = time derivative in pb [  ]
+        - omdot = time derivative in om [deg / yr]
+
+    Output:
+        - time delay [s]
+    """
+
+    ma = o.mean_anomaly(pb, dates, t0, pbdot=pbdot) 
+    ea = o.ecc_anomaly(ma, ecc) 
+    ta = o.true_anomaly(ea, ecc) 
+    om = o.peri_omega(om, pb, ta, omdot=omdot) 
+    se, ce = np.sin(ea * d2r), np.cos(ea * d2r)
+    so, co = np.sin(om * d2r), np.cos(om * d2r)
+    return -2 * T_sun * m2 * (1 - ecc * ce - sini * ((ce - ecc) * so + se * np.sqrt(1 - ecc**2) * co))
