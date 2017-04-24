@@ -1,7 +1,7 @@
 #! /usr/bin/python
 
 import numpy as np
-import pywt
+#import pywt
 
 #def smooth_wavelet1D(indat, wave='sym8', nlevel=5, ncycle=10, threshtype='hard'):
 #    """
