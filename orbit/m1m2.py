@@ -2,7 +2,7 @@
 
 from matplotlib.font_manager import FontProperties
 from PSRpy.const import T_sun, d2r
-from ..parfile import DerivePar
+from PSRpy.parfile import DerivePar
 from pkcorr import doppler
 import matplotlib.pyplot as plt
 import numpy as np
@@ -226,7 +226,7 @@ class M1M2():
             m2om1sh, m2om1sl = om1spin_m1m2(om1smed, om1serr, pb, e, m1, npts)
             setattr(self,'OM1SPIN_U',m2om1sh)
             setattr(self,'OM1SPIN_L',m2om1sl)
-    def plot(self):
+    def plot(self, labels={}):
         """Plot availabe m1-m2 data using the matplotlib package."""
         if (hasattr(self,'OMDOT_U') and hasattr(self,'OMDOT_L')):
             #plt.plot(self.m1,self.OMDOT_U,'k-')
