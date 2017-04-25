@@ -62,8 +62,10 @@ class DerivePar():
         # derive proper motion.
         if (hasattr(inobj,'PMRA') and hasattr(inobj,'PMDEC')):
             setattr(self,'mu',np.sqrt(inobj.PMRA**2 + inobj.PMDEC**2))
-        if (hasattr(inobj,'PMBETA') and hasattr(inobj,'PMLAMBDA')):
+        elif (hasattr(inobj,'PMBETA') and hasattr(inobj,'PMLAMBDA')):
             setattr(self,'mu',np.sqrt(inobj.PMBETA**2 + inobj.PMLAMBDA**2))
+        elif (hasattr(inobj,'PMELAT') and hasattr(inobj,'PMELONG')):
+            setattr(self,'mu',np.sqrt(inobj.PMELAT**2 + inobj.PMELONG**2))
         if (hasattr(inobj,'PMRAerr') and hasattr(inobj,'PMDECerr')):
             setattr(self,'muerr',np.sqrt((inobj.PMRA*inobj.PMRAerr)**2+\
             (inobj.PMDEC*inobj.PMDECerr)**2)/self.mu)
@@ -102,7 +104,10 @@ class DerivePar():
                     dT0 = np.sqrt(Tasc_err**2 + (inobj.PB / 2*np.pi * dom)**2)
                     setattr(self, 'T0err', dT0)
             else:
-                ecc = inobj.E
+                if hasattr(inobj, 'ECC'):
+                    ecc = inobj.ECC
+                else:
+                    ecc = inobj.E
             # if orthometric SD parameters are used, convert to m2/cosi.
             if hasattr(inobj,'H3'):
                 h3 = inobj.H3
