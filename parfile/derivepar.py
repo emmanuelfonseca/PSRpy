@@ -114,7 +114,7 @@ class DerivePar():
                 stig = 0.
                 if hasattr(inobj, 'STIG'):
                     stig = inobj.STIG
-                elif hasattr(inob, 'VARSIGMA'):
+                elif hasattr(inobj, 'VARSIGMA'):
                     stig = inobj.VARSIGMA
                 m2 = h3/stig**3/T_sun
                 cosi = (1-stig**2)/(1+stig**2)
