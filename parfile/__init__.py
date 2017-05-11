@@ -1,3 +1,3 @@
 from getpar import ReadPar
 from derivepar import DerivePar
-from .printpar import *
+from .printpar import PrintPar

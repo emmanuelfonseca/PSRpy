@@ -17,24 +17,31 @@ par_errors  = ['JUMP', 'T2EFAC', 'T2EQUAD', 'TNECORR', 'ECORR']
 pi   = np.pi
 
 class ReadPar():
+    """
+    Reads in parfile parameter values, uncertainties and flags as object attributes.
+
+    Inputs
+    ------
+
+    infile : str
+        pulsar-timing parameter file
+
+    efac : float
+        constant factor to multiply across all uncertainties.
+    
+    Notes
+    -----
+    Parameters stored as class attibutes using same parameter-file name (e.g. par.RAJ 
+    stores the 'RAJ' value in 'par' object). Parameter uncertainties are stored as attributes 
+    with parameter name plus an 'err' extension (e.g. par.RAJerr stores the 'RAJ' uncertainty 
+    in the 'par' object).
+    """
+
 
     def __init__(self, infile, efac=1):
-        """
-        Reads in parfile parameter values, uncertainties and flags as object attributes.
-
-        Required argument: 
-            - 'infile' = input parfile (currently works in TEMPO format).
-        Default argument:
-            - 'efac' = constant factor to multiply across all uncertainties.
-    
-        Notes:
-            - Parameters stored using same parfile name
-              (e.g. par.RAJ stores 'RAJ' value in 'par' object).
-            - Parameter uncertainties stored as parameter name plus 'err' 
-              extension (e.g. par.RAJerr stores 'RAJ' error in 'par' object).
-        """
 
         # preserve order of parameters in parfile.
+        self.fit_parameters = []
         parorder = []
 
         for line in file(infile):
@@ -52,9 +59,10 @@ class ReadPar():
                 setattr(self, parname, parvalue)
                 # the following is for 'RAJ', 'DECJ' that have flags/errors.
                 if (len(lsplit) > 2):
+                    self.fit_parameters.append(parname)
                     setattr(self, parname + 'flag', np.int(lsplit[2]))
                 if (len(lsplit) > 3):
-                    setattr(self, parname + 'err', efac * lsplit[3])
+                    setattr(self, parname + 'err', efac * np.float(lsplit[3]))
 
             # set these as integers.
             elif (parname in par_ints):
@@ -73,6 +81,7 @@ class ReadPar():
                     setattr(self, parname, np.float(parvalue))
                 # set flag and error attributes if present in parfile.
                 if (len(lsplit) > 2):
+                    self.fit_parameters.append(parname)
                     setattr(self,parname+'flag',np.int(lsplit[2]))
                 if (len(lsplit) > 3):
                     if (lsplit[3].find('D') != -1):
@@ -91,7 +100,7 @@ class ReadPar():
             parorder.append(parname)
 
         # set array of ordered parameters as object attribute.
-        setattr(self,'parorder',parorder)
+        setattr(self, 'parorder', parorder)
 
     def fix(self):
         """
@@ -106,6 +115,12 @@ class ReadPar():
         """
         Rotates spin/binary parameters to new PEPOCH, if time-derivatives are present. Default is 
         to rotate solution to the midpoint of the timespan.
+
+        Input
+        -----
+
+        new_epoch : float
+            New reference epoch for timing solution.
         """
 
         from math import factorial
@@ -188,7 +203,6 @@ class ReadPar():
                 new_PB = self.PB + pbdot * diff_binary 
                 setattr(self, 'PB', new_PB)
             
-
     def step(self):
         """
         Randomly steps all parameters with uncertainties in parifle.
@@ -205,89 +219,11 @@ class ReadPar():
                     setattr(self, parameter, value + str(np.random.normal(loc=0., scale=err)))
         setattr(self,parameter+'flag',0)
 
-class DmxPar():
-    """
-    Extract and manipulate DMX data from parfile object.
-    """
-    def __init__(self,inobj):
-        # check if DMX is set; if so, proceed.
-        if (hasattr(inobj,"DMX")):
-            nbins   = 0
-            dmxgrad = 0
-            DMX, DMX1, DMXEP, DMXF1, DMXF2, DMXR1, DMXR2 = [], [], [], [], [], [], []
-            DMXerr, DMX1err = [], []
-            setattr(self,'DMX',inobj.DMX)
-            for ii in range(1000):
-                if (ii < 10 and hasattr(inobj,'DMX_000'+str(ii+1))):
-                    #print getattr(inobj,'DMX_000'+str(ii+1))
-                    DMX.append(getattr(inobj,'DMX_000'+str(ii+1)))
-                    DMXerr.append(getattr(inobj,'DMX_000'+str(ii+1)+'err'))
-                    if (hasattr(inobj,'DMX1_000'+str(ii+1))):
-                       DMX1.append(getattr(inobj,'DMX1_000'+str(ii+1))) 
-                       DMX1err.append(getattr(inobj,'DMX1_000'+str(ii+1)+'err'))
-                    DMXEP.append(getattr(inobj,'DMXEP_000'+str(ii+1)))
-                    DMXF1.append(getattr(inobj,'DMXF1_000'+str(ii+1)))
-                    DMXF2.append(getattr(inobj,'DMXF2_000'+str(ii+1)))
-                    DMXR1.append(getattr(inobj,'DMXR1_000'+str(ii+1)))
-                    DMXR2.append(getattr(inobj,'DMXR2_000'+str(ii+1)))
-                elif (ii < 99 and hasattr(inobj,'DMX_00'+str(ii+1))):
-                    #print getattr(inobj,'DMX_00'+str(ii+1))
-                    DMX.append(getattr(inobj,'DMX_00'+str(ii+1)))
-                    DMXerr.append(getattr(inobj,'DMX_00'+str(ii+1)+'err'))
-                    if (hasattr(inobj,'DMX1_00'+str(ii+1))):
-                       DMX1.append(getattr(inobj,'DMX1_00'+str(ii+1))) 
-                       DMX1err.append(getattr(inobj,'DMX1_00'+str(ii+1)+'err'))
-                    DMXEP.append(getattr(inobj,'DMXEP_00'+str(ii+1)))
-                    DMXF1.append(getattr(inobj,'DMXF1_00'+str(ii+1)))
-                    DMXF2.append(getattr(inobj,'DMXF2_00'+str(ii+1)))
-                    DMXR1.append(getattr(inobj,'DMXR1_00'+str(ii+1)))
-                    DMXR2.append(getattr(inobj,'DMXR2_00'+str(ii+1)))
-                elif (ii < 999 and hasattr(inobj,'DMX_0'+str(ii+1))):
-                    #print getattr(inobj,'DMX_00'+str(ii+1))
-                    DMX.append(getattr(inobj,'DMX_0'+str(ii+1)))
-                    DMXerr.append(getattr(inobj,'DMX_0'+str(ii+1)+'err'))
-                    if (hasattr(inobj,'DMX1_0'+str(ii+1))):
-                       DMX1.append(getattr(inobj,'DMX1_0'+str(ii+1))) 
-                       DMX1err.append(getattr(inobj,'DMX1_0'+str(ii+1)+'err'))
-                    DMXEP.append(getattr(inobj,'DMXEP_0'+str(ii+1)))
-                    DMXF1.append(getattr(inobj,'DMXF1_0'+str(ii+1)))
-                    DMXF2.append(getattr(inobj,'DMXF2_0'+str(ii+1)))
-                    DMXR1.append(getattr(inobj,'DMXR1_0'+str(ii+1)))
-                    DMXR2.append(getattr(inobj,'DMXR2_0'+str(ii+1)))
-                else:
-                    break
-                nbins += 1
-        setattr(self,'nbins',nbins)
-        setattr(self,'DMX',DMX)
-        setattr(self,'DMXerr',DMXerr)
-        if (dmxgrad > 0):
-            setattr(self,'DMX1',DMX1)
-            setattr(self,'DMX1err',DMX1err)
-        setattr(self,'DMXEP',DMXEP)
-        setattr(self,'DMXR1',DMXR1)
-        setattr(self,'DMXR2',DMXR2)
-        setattr(self,'DMXF1',DMXF1)
-        setattr(self,'DMXF2',DMXF2)
-    def plot(self,plotder='n'):
+    def write(self, outfile="out.par"):
         """
-        Plot DMX vs. time with uncertainties (if available).
+        Writes parameter-file Python object to ASCII file.
         """
-        plt.errorbar(self.DMXEP,self.DMX,yerr=self.DMXerr,fmt='ro')
-        plt.show()
 
+        from PSRpy.parfile import PrintPar
 
-class ConvertPar():
-    def __init__(self,inobj,binary=None):
-        """
-        Converts a subset of data in a supplied parfile object to another 
-        desired subset (e.g. converts from equatorial to ecliptic coordinates, or 
-        from ELL1 binary model to DD model, if applicable.)
-        """
-        # if binary option is set...
-        if (binary is not None):
-            if (binary == inobj.BINARY):
-                sys.exit("Error: cannot convert parfile since binary models match!")
-            else:
-                print "No!"
-        #else:
-        #    print "No!"
+        PrintPar(self, outfile=outfile)
