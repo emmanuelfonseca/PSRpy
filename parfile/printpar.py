@@ -35,7 +35,7 @@ class PrintPar():
 
             # next, check if parameter has fixed/integer value.
             elif (parameter in int_list):
-                outfile.write("{0:15}       {1:2d}\n".format(parameter, value))
+                outfile.write("{0:15}       {1:2d}\n".format(parameter, int(value)))
 
             # next, isolate noise-model parameters.
             elif ('JUMP' in parameter or 'T2EFAC' in parameter or 'T2EQUAD' in parameter or 'ECORR' in parameter):
