@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-from config_parfile import parameter_list, string_list, error_list, spin_freq_derivatives
+from config_parfile import parameter_list, string_list, int_list, error_list, spin_freq_derivatives
 import numpy as np
 import sys
 
@@ -30,7 +30,7 @@ class PrintPar():
             value = str(getattr(inobj,parameter))
 
             # first check if parameter has fixed/string value.
-            if (parameter in string_list):
+            if (parameter in string_list or parameter in int_list):
                 outfile.write("{0:15}       {1:20}\n".format(parameter, value))
 
             # next, isolate noise-model parameters.
