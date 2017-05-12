@@ -72,7 +72,7 @@ class PrintPar():
                         error = str(error_value)
 
                     else:
-                        order = self.order_of_magnitude(getattr(inobj, parameter+'err'))
+                        order = self.order_of_magnitude(getattr(inobj, parameter + 'err'))
                         error = ("{0:." + str(order + 3) + "f}").format(getattr(inobj, parameter + 'err'))
 
                         if (parameter != 'RAJ' and parameter != 'DECJ'):

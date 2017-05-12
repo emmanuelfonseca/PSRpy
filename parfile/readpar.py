@@ -208,33 +208,35 @@ class ReadPar():
         Randomly steps all parameters with uncertainties in parifle.
         """
 
-        for parameter in self.parorder:
+        for parameter in self.fit_parameters:
             if (hasattr(self,parameter + 'err')):
                 value = getattr(self, parameter) 
                 err = getattr(self, parameter + 'err')
+                
+                if (err != 0.):
 
-                if hasattr(self, 'RAJ'):
-                    ra = Angle(getattr(self, 'RAJ'), unit=u.hour)
-                    err = getattr(self, 'RAJerr') / 3600
-                    ra_new = ra.deg + np.random.normal(loc=0., scale=err)
-                    ra_new = Angle(ra_new, unit=u.deg)
-                    setattr(self, parameter, str(ra_new.to_string(unit=u.hour, sep=':', precision=10)))
+                    if (parameter == 'RAJ'):
+                        ra = Angle(getattr(self, 'RAJ'), unit=u.hour)
+                        err = getattr(self, 'RAJerr') / 3600
+                        ra_new = ra.deg + np.random.normal(loc=0., scale=err)
+                        ra_new = Angle(ra_new, unit=u.deg)
+                        setattr(self, parameter, str(ra_new.to_string(unit=u.hour, sep=':', precision=10)))
+    
+                    elif (parameter == 'DECJ'):
+                        dec = Angle(getattr(self, 'DECJ'), unit=u.deg)
+                        err = getattr(self, 'DECJerr') / 3600
+                        dec_new = dec.deg + np.random.normal(loc=0., scale=err)
+                        dec_new = Angle(dec_new, unit=u.deg)
+                        setattr(self, parameter, str(dec_new.to_string(unit=u.deg, sep=':', precision=10)))
 
-                elif hasattr(self, 'DECJ'):
-                    dec = Angle(getattr(self, 'DECJ'), unit=u.deg)
-                    err = getattr(self, 'DECJerr') / 3600
-                    dec_new = dec.deg + np.random.normal(loc=0., scale=err)
-                    dec_new = Angle(dec_new, unit=u.deg)
-                    setattr(self, parameter, str(dec_new.to_string(unit=u.deg, sep=':', precision=10)))
+                    elif (parameter == 'SINI'):
+                        cosi = np.random.uniform(0.,1.)
+                        setattr(self, parameter, np.sqrt(1.-cosi**2))
 
-                elif (parameter == 'SINI'):
-                    cosi = np.random.uniform(0.,1.)
-                    setattr(self, parameter, np.sqrt(1.-cosi**2))
+                    else:
+                        setattr(self, parameter, value + np.random.normal(loc=0., scale=err))
 
-                else:
-                    setattr(self, parameter, value + str(np.random.normal(loc=0., scale=err)))
-
-        setattr(self,parameter+'flag',0)
+                setattr(self,parameter + 'flag', 0)
 
     def write(self, outfile="out.par"):
         """
