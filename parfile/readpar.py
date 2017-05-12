@@ -225,7 +225,9 @@ class ReadPar():
                         setattr(self, parameter, str(dec_new.to_string(unit=u.deg, sep=':', precision=10)))
 
                     elif (parameter == 'SINI'):
-                        cosi = np.random.uniform(0.,1.)
+                        cosi = np.sqrt(1 - getattr(self, 'SINI')**2)
+                        err = getattr(self, 'DECJerr') / 3600
+                        cosi +=  err * np.random.uniform(-1., 1.)
                         setattr(self, parameter, np.sqrt(1.-cosi**2))
 
                     else:
