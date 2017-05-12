@@ -2,6 +2,7 @@ from . import dm
 from . import fft
 from . import fits
 from . import jr97
+from . import mcmc
 from . import orbit
 from . import parfile
 from . import profile
