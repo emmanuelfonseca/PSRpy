@@ -11,6 +11,8 @@ spin_freq_derivatives = ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "
 string_list = ["PSR", "PEPOCH", "START", "FINISH", "SOLARN0", "EPHEM", "ECL", "CLK",
                "UNITS", "TIMEEPH", "T2CMETHOD", "CORRECT_TROPOSPHERE", "PLANET_SHAPIRO",
                "DILATEFREQ", "NTOA", "TRES", "TZRMJD", "TZRFRQ", "TZRSITE", "NITS", "INFO",
-               "BINARY"]
+               "BINARY", "DCOVFILE"]
+
+int_list    = ["NTOA", "NITS", "NDDM", "EPHVER", "MODE"]
 
 error_list = ["T2EFAC", "T2EQUAD", "ECORR"]

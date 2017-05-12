@@ -3,16 +3,13 @@
 from re import match
 from PSRpy.const import c, G, M_sun, T_sun
 from astropy.coordinates import Angle
+from config_parfile import string_list, error_list
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-par_strings = ['PSR','PSRJ','RAJ','DECJ','EPHEM','ECL','CLK','UNITS','TIMEEPH',
-               'T2CMETHOD','TZRSITE','CORRECT_TROPOSPHERE','PLANET_SHAPIRO',
-               'DILATEFREQ','INFO','BINARY','DCOVFILE']
-par_ints    = ['NTOA','NITS','NDDM','EPHVER']
-par_errors  = ['JUMP', 'T2EFAC', 'T2EQUAD', 'TNECORR', 'ECORR']
+int_list    = ['NTOA','NITS','NDDM','EPHVER']
 
 pi   = np.pi
 
@@ -55,7 +52,7 @@ class ReadPar():
             parname, parvalue = lsplit[0], lsplit[1]
 
             # set the following attributes as strings.
-            if (parname in par_strings):
+            if (parname in string_list):
                 setattr(self, parname, parvalue)
                 # the following is for 'RAJ', 'DECJ' that have flags/errors.
                 if (len(lsplit) > 2):
@@ -65,7 +62,7 @@ class ReadPar():
                     setattr(self, parname + 'err', efac * np.float(lsplit[3]))
 
             # set these as integers.
-            elif (parname in par_ints):
+            elif (parname in int_list):
                 setattr(self, parname, np.int(parvalue))
 
             # otherwise, if not a JUMP, assume it's a fit parameter 
