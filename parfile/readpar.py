@@ -67,7 +67,7 @@ class ReadPar():
 
             # otherwise, if not a JUMP, assume it's a fit parameter 
             # and store value/errors as floats.
-            elif (parname not in par_errors):
+            elif (parname not in error_list):
                 # switch 'D' with 'e' for exponents.
                 if (parvalue.find('D') != -1):
                     parvalue = parvalue.replace('D','e')
@@ -86,7 +86,7 @@ class ReadPar():
                     setattr(self,parname+'err',np.float(efac*lsplit[3]))
 
             # store JUMP/EFAC/EQUAD as float, but values have different indeces.
-            elif (parname in par_errors):
+            elif (parname in error_list):
                 parname += '_'+lsplit[2]
                 setattr(self,parname,lsplit[3])
                 if (len(lsplit) > 4):
