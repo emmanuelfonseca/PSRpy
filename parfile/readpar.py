@@ -213,14 +213,14 @@ class ReadPar():
                     if (parameter == 'RAJ'):
                         ra = Angle(getattr(self, 'RAJ'), unit=u.hour)
                         err = getattr(self, 'RAJerr') / 3600
-                        ra_new = ra.deg + np.random.normal(loc=0., scale=err)
+                        ra_new = ra.deg + err * np.random.uniform(-1., 1.)
                         ra_new = Angle(ra_new, unit=u.deg)
                         setattr(self, parameter, str(ra_new.to_string(unit=u.hour, sep=':', precision=10)))
     
                     elif (parameter == 'DECJ'):
                         dec = Angle(getattr(self, 'DECJ'), unit=u.deg)
                         err = getattr(self, 'DECJerr') / 3600
-                        dec_new = dec.deg + np.random.normal(loc=0., scale=err)
+                        dec_new = dec.deg + err * np.random.uniform(-1., 1.)
                         dec_new = Angle(dec_new, unit=u.deg)
                         setattr(self, parameter, str(dec_new.to_string(unit=u.deg, sep=':', precision=10)))
 
@@ -231,7 +231,7 @@ class ReadPar():
                         setattr(self, parameter, np.sqrt(1.-cosi**2))
 
                     else:
-                        setattr(self, parameter, value + np.random.normal(loc=0., scale=err))
+                        setattr(self, parameter, value + err * np.random.uniform(-1., 1.))
 
                 setattr(self,parameter + 'flag', 0)
 
