@@ -1,4 +1,4 @@
-parameter_list = ["RAJ", "DECJ", "PMRA", "PMDEC", "LAMBDA", "BETA", "PMLAMBDA", 
+parameter_list = ["PMRA", "PMDEC", "LAMBDA", "BETA", "PMLAMBDA", 
                   "PMBETA", "PX", "F0", "F1", "F2", "F3", "F4", "F5", "F6", "F7", 
                   "F8", "F9", "F10", "F11", "F12", "F13", "F14", "F15", "F16", 
                   "F17", "F18", "F19", "F20", "DM", "DMX", "FD1", "FD2", "FD3", "FD4", 
@@ -8,7 +8,7 @@ parameter_list = ["RAJ", "DECJ", "PMRA", "PMDEC", "LAMBDA", "BETA", "PMLAMBDA",
 spin_freq_derivatives = ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", 
                          "F12", "F13", "F14", "F15", "F16", "F17", "F18", "F19", "F20"]
 
-string_list = ["PSR", "PEPOCH", "START", "FINISH", "SOLARN0", "EPHEM", "ECL", "CLK",
+string_list = ["PSR", "RAJ", "DECJ", "PEPOCH", "START", "FINISH", "SOLARN0", "EPHEM", "ECL", "CLK",
                "UNITS", "TIMEEPH", "T2CMETHOD", "CORRECT_TROPOSPHERE", "PLANET_SHAPIRO",
                "DILATEFREQ", "NTOA", "TRES", "TZRMJD", "TZRFRQ", "TZRSITE", "NITS", "INFO",
                "BINARY", "DCOVFILE"]
