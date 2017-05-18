@@ -76,7 +76,8 @@ class ReadPar():
                     setattr(self, parname, np.float(parvalue))
                 # set flag and error attributes if present in parfile.
                 if (len(lsplit) > 2):
-                    self.fit_parameters.append(parname)
+                    if (parname != 'START' and parname != 'FINISH'):
+                        self.fit_parameters.append(parname)
                     setattr(self,parname+'flag',np.int(lsplit[2]))
                 if (len(lsplit) > 3):
                     if (lsplit[3].find('D') != -1):
@@ -85,12 +86,13 @@ class ReadPar():
 
             # store JUMP/EFAC/EQUAD as float, but values have different indeces.
             elif (parname in error_list):
-                parname += '_'+lsplit[2]
-                setattr(self,parname,lsplit[3])
+                parname += '_' + lsplit[2]
+                self.fit_parameters.append(parname)
+                setattr(self, parname, np.float(lsplit[3]))
                 if (len(lsplit) > 4):
-                    setattr(self,parname+'flag',efac*lsplit[4])
+                    setattr(self, parname + 'flag', efac * np.float(lsplit[4]))
                 if (len(lsplit) > 5):
-                    setattr(self,parname+'err',efac*lsplit[5])
+                    setattr(self, parname + 'err', efac * np.float(lsplit[5]))
 
             parorder.append(parname)
 
@@ -198,29 +200,31 @@ class ReadPar():
                 new_PB = self.PB + pbdot * diff_binary 
                 setattr(self, 'PB', new_PB)
             
-    def step(self):
+    def step(self, uniform_factor=1):
         """
         Randomly steps all parameters with uncertainties in parifle.
         """
+        
+        n_dim = len(self.fit_parameters)
 
         for parameter in self.fit_parameters:
             if (hasattr(self,parameter + 'err')):
                 value = getattr(self, parameter) 
-                err = getattr(self, parameter + 'err')
+                err = getattr(self, parameter + 'err') * uniform_factor / n_dim
                 
                 if (err != 0.):
 
                     if (parameter == 'RAJ'):
                         ra = Angle(getattr(self, 'RAJ'), unit=u.hour)
                         err = getattr(self, 'RAJerr') / 3600
-                        ra_new = ra.deg + err * np.random.uniform(-1., 1.)
+                        ra_new = ra.deg + err * np.random.uniform(-1., 1.) 
                         ra_new = Angle(ra_new, unit=u.deg)
                         setattr(self, parameter, str(ra_new.to_string(unit=u.hour, sep=':', precision=10)))
     
                     elif (parameter == 'DECJ'):
                         dec = Angle(getattr(self, 'DECJ'), unit=u.deg)
                         err = getattr(self, 'DECJerr') / 3600
-                        dec_new = dec.deg + err * np.random.uniform(-1., 1.)
+                        dec_new = dec.deg + err * np.random.uniform(-1., 1.) 
                         dec_new = Angle(dec_new, unit=u.deg)
                         setattr(self, parameter, str(dec_new.to_string(unit=u.deg, sep=':', precision=10)))
 

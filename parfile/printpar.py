@@ -31,14 +31,24 @@ class PrintPar():
 
             # first check if parameter has fixed/string value.
             if (parameter in string_list):
-                outfile.write("{0:15}       {1:20}\n".format(parameter, value))
+                
+                if (parameter == 'RAJ' and hasattr(inobj, 'RAJerr')):
+                    flag = getattr(inobj, 'RAJflag') 
+                    error = getattr(inobj, 'RAJerr')
+                    outfile.write("{0:15}       {1:20}       {2:5}      {3:.10f}\n".format(parameter, value, flag, error))
+                elif (parameter == 'DECJ' and hasattr(inobj, 'DECJerr')):
+                    flag = getattr(inobj, 'DECJflag') 
+                    error = getattr(inobj, 'DECJerr')
+                    outfile.write("{0:15}       {1:20}       {2:5}      {3:.10f}\n".format(parameter, value, flag, error))
+                else:
+                    outfile.write("{0:15}       {1:20}\n".format(parameter, value))
 
             # next, check if parameter has fixed/integer value.
             elif (parameter in int_list):
                 outfile.write("{0:15}       {1:2d}\n".format(parameter, int(value)))
 
             # next, isolate noise-model parameters.
-            elif ('JUMP' in parameter or 'T2EFAC' in parameter or 'T2EQUAD' in parameter or 'ECORR' in parameter):
+            elif (parameter in error_list):
                 par, und, front = parameter.partition('_')
                 fe = '-f'
 
@@ -57,7 +67,7 @@ class PrintPar():
                     outfile.write("{0:10} {1:5} {2:20} {3:20}\n".format(par,fe,front,value))                  
 
             # finally, loop over fit parameters.
-            elif (parameter in parameter_list or "DMX" in parameter):
+            elif (parameter in parameter_list or "DMX" in parameter or "JUMP_" in parameter):
 
                 if (value.find('E') != -1):
                     value = value.replace('E','D')
