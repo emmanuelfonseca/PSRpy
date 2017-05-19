@@ -5,7 +5,7 @@ import sys
 
 __all__ = ["Residuals"]
 
-class Residuals():
+class Residuals:
     """
     A class object that stores and manipulates tempo output. Currently, this module reads in 
     the output of extract.pl (in $TEMPO/util/extract) that contains post-fit residuals and 
