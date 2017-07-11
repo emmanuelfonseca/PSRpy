@@ -61,6 +61,7 @@ class Residuals:
             'mjd': 'MJD',
             'year': 'Year',
             'res': r'Post-fit Residual ($\mu$s)',
+            'res_P': r'Post-fit Residual (fractional spin-period)',
             'orb_phase': 'Orbital Phase',
             'uncertainty': "Post-fit Residual Uncertainty ($\mu$s)"
         }
