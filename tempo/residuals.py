@@ -115,6 +115,9 @@ class Residuals:
         ax.set_xlabel(axlabel[x], fontproperties=font, fontsize=fontsize)
         ax.set_ylabel(axlabel[y], fontproperties=font, fontsize=fontsize)
 
+        if plotbothres:
+            ax2.set_ylabel(axlabel['res_P'], fontproperties=font, fontsize=fontsize)
+
         # add grids, if desired.
         if (grid): 
             ax.grid()
