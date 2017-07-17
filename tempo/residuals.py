@@ -120,9 +120,8 @@ class Residuals:
 
         if plotbothres:
             ax2 = ax.twinx()
-            y2_data = getattr('res_P')
             ax2.set_ylabel(axlabel['res_P'], fontproperties=font, fontsize=fontsize)
-            ax2.set_ylim(np.min(y2_data) * 5, np.max(y2_data) * 5)
+            ax2.set_ylim(np.min(self.res_P) * 5, np.max(self.res_P) * 5)
 
         # save figure in png format, if desired.
         if (savefig):
