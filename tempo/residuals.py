@@ -122,9 +122,10 @@ class Residuals:
             ax2 = ax.twinx()
             ax2.set_ylabel(axlabel['res_P'], fontproperties=font, fontsize=fontsize)
             ax2.set_ylim(np.min(self.res_P) * 5, np.max(self.res_P) * 5)
+            plt.tight_layout()
 
         # save figure in png format, if desired.
-        if (savefig):
+        if savefig:
             plt.savefig(figfilename + '.' + figfiletype, fmt=figfiletype)
 
         plt.show()
