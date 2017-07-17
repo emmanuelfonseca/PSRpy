@@ -85,9 +85,6 @@ class Residuals:
             ax.hist(getattr(self, 'res'), bins, alpha=alpha)
         else:
 
-            if plotbothres:
-                ax2 = ax.twinx()
-
             x_data = getattr(self, x)
             y_data = getattr(self, y)
             # if desired x-axis is time in years, convert.
@@ -102,10 +99,6 @@ class Residuals:
                         y_data_int = y_data[(np.where(info_flags == label))[0]]
                         yerr_data_int = yerr_data[(np.where(info_flags == label))[0]]
                         ax.errorbar(x_data_int, y_data_int, yerr=yerr_data_int, fmt='+')
-                        if plotbothres:
-                            y_data2 = getattr(self, 'res_P')
-                            y_data2_int = y_data2[(np.where(info_flags == label))[0]]
-                            ax2.plot(x_data_int, y_data2_int, '+')
                         
                 else:
                     ax.errorbar(x_data, y_data, yerr=yerr_data, fmt='+')
@@ -122,20 +115,16 @@ class Residuals:
         if (grid): 
             ax.grid()
 
+        # now, set y-axis limits. 
+        ax.set_ylim(np.min(y_data) * 5, np.max(y_data) * 5)
+
         if (len(ylim) == 2):
             ax.ylim(ylim)
 
         if plotbothres:
-            def align_yaxis(ax1, v1, ax2, v2):
-                """adjust ax2 ylimit so that v2 in ax2 is aligned to v1 in ax1"""
-                _, y1 = ax1.transData.transform((0, v1))
-                _, y2 = ax2.transData.transform((0, v2))
-                inv = ax2.transData.inverted()
-                _, dy = inv.transform((0, 0)) - inv.transform((0, y1-y2))
-                miny, maxy = ax2.get_ylim()
-                ax2.set_ylim(miny+dy, maxy+dy)
-
-            align_yaxis(ax, 0, ax2, 0)
+            ax2 = ax.twinx()
+            y2_data = getattr('res_P')
+            ax2.set_ylim(np.min(y2_data) * 5, np.max(y2_data) * 5)
 
         # save figure in png format, if desired.
         if (savefig):
