@@ -8,3 +8,4 @@ from . import parfile
 from . import profile
 from . import simulate
 from . import tempo
+from . import timfile
