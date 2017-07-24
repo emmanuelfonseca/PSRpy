@@ -60,8 +60,8 @@ class Residuals:
         axlabel = {
             'mjd': 'MJD',
             'year': 'Year',
-            'res': r'Post-fit Residual ($\mu$s)',
-            'res_P': r'Post-fit Residual (fractional spin-period)',
+            'res': r'TOA Residual ($\mu$s)',
+            'res_P': r'TOA Residual (pulse-number difference)',
             'orb_phase': 'Orbital Phase',
             'uncertainty': "Post-fit Residual Uncertainty ($\mu$s)"
         }
