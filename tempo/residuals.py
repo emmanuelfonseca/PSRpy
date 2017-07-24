@@ -46,7 +46,7 @@ class Residuals:
 
     def plot(self, x='mjd', y='res', reserr=True, info=False, grid=False, 
         resHist=False, savefig=False, figfilename='fig', figfiletype='png', bins=50, 
-        fontsize=15, alpha=1, years=False, plotbothres=True, useclassic=True, ylim=[]):
+        fontsize=15, alpha=1, yscalefac=1.5, years=False, plotbothres=True, useclassic=True, ylim=[]):
         """
         Plot data of choice. 
         """
@@ -113,7 +113,7 @@ class Residuals:
             ax.grid()
 
         # now, set y-axis limits. 
-        ax.set_ylim(np.min(y_data) * 5, np.max(y_data) * 5)
+        ax.set_ylim(np.min(y_data) * yscalefac, np.max(y_data) * yscalefac)
 
         if (len(ylim) == 2):
             ax.ylim(ylim)
@@ -121,7 +121,7 @@ class Residuals:
         if plotbothres:
             ax2 = ax.twinx()
             ax2.set_ylabel(axlabel['res_P'], fontproperties=font, fontsize=fontsize)
-            ax2.set_ylim(np.min(self.res_P) * 5, np.max(self.res_P) * 5)
+            ax2.set_ylim(np.min(self.res_P) * yscalefac, np.max(self.res_P) * yscalefac)
             plt.tight_layout()
 
         # save figure in png format, if desired.
