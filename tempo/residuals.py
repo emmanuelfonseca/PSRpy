@@ -1,5 +1,6 @@
 #! /usr/bin/python -B
 
+from config_tempo import colors_residuals
 import numpy as np
 import sys
 
@@ -94,11 +95,15 @@ class Residuals:
             if (y == 'res' and reserr):
                 yerr_data = self.uncertainty
                 if (info):
+                    color_count = 0
+
                     for label in np.unique(info_flags):
                         x_data_int = x_data[(np.where(info_flags == label))[0]]
                         y_data_int = y_data[(np.where(info_flags == label))[0]]
                         yerr_data_int = yerr_data[(np.where(info_flags == label))[0]]
-                        ax.errorbar(x_data_int, y_data_int, yerr=yerr_data_int, fmt='+')
+                        color = colors_residuals[color_count]
+                        ax.errorbar(x_data_int, y_data_int, yerr=yerr_data_int, color=color, fmt='+')
+                        color_count += 1
                         
                 else:
                     ax.errorbar(x_data, y_data, yerr=yerr_data, fmt='+')
