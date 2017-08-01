@@ -1,4 +1,4 @@
-colors_residuals = ['firebrick', 'royalblue', 'darkmagenta', 'brown', 'peru', 'dimgray', 'blueviolet', 
+colors_residuals = ['firebrick', 'royalblue', 'darkmagenta', 'dimgray', 'lightcoral', 'blueviolet', 'brown', 
                     'crimson', 'darkolivegreen', 'lightcoral', 'darkcyan']
 
 matrix_dtype = [('m', '<i4'), ('j', '<i4'), ('paramj', '<a5'), ('gcor', '<f8'), ('sig', '<f8')]
