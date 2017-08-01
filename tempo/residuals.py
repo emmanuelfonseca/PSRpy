@@ -61,7 +61,7 @@ class Residuals:
             'mjd': 'MJD',
             'year': 'Year',
             'res': r'TOA Residual ($\mu$s)',
-            'res_P': r'TOA Residual (pulse-number difference)',
+            'res_P': r'Pulse-number Residual',
             'orb_phase': 'Orbital Phase',
             'uncertainty': "Post-fit Residual Uncertainty ($\mu$s)"
         }
