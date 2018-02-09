@@ -8,16 +8,25 @@ import numpy as np
 
 def roemer_delay_ssb(epoch, ecl_b, ecl_l):
     """
-    Computes the Roemer timing delay for the Earth, given a set 
-    of ecliptic coordinates.
+    Computes the Roemer timing delay about the Solar System Barycentre at the position the Earth, 
+    given a set of ecliptic coordinates.
 
-    Inputs:
-        - epoch = epoch where delay is evaluated [MJD]
-        - ecl_b = beta [deg]
-        - ecl_l = lambda [deg]
+    Inputs
+    ------
 
-    Output:
-        - time delay [s]
+    epoch : float 
+        Observation timestamp where delay is evaluated, in units of MJD.
+
+    ecl_b : float 
+        Ecliptic latitude, in units of degrees.
+
+    ecl_l = : float
+        Ecliptic longitude, in units of degrees.
+
+    Output
+    ------
+    
+        Time delay, in units of seconds.
     """
 
     r_earth = ssb.planet_position_ecliptic(epoch)
@@ -35,7 +44,7 @@ def roemer_delay_ssb(epoch, ecl_b, ecl_l):
         return np.sum(r_earth * s) * au / c
 
 
-def earth_parallax_delay(epoch, ecl_b, ecl_l, parallax):
+def earth_parallax_delay(epoch, ecl_b, ecl_l, dist):
     """
     Computes the annual-parallax timing delay for the Earth, given a set 
     of ecliptic coordinates and distance measure.
@@ -59,10 +68,10 @@ def earth_parallax_delay(epoch, ecl_b, ecl_l, parallax):
         for ii in range(len(epoch)):
             delay[ii] = np.sum(np.cross(r_earth[:, ii], s)**2)
 
-        return delay * (parallax * d2r / 1000 / 3600) / 2 / c / au
+        return delay * 1 / 2 / c / (dist * 1000 * pc)
 
     else:
-        return np.sum(np.cross(r_earth, s)**2) * (parallax * d2r / 1000 / 3600) / 2 / c / au
+        return np.sum(np.cross(r_earth, s)**2) * 1 / 2 / c / (dist * 1000 * pc)
 
 def orbital_parallax_delay(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, ecl_l, d=1, basis=2):
     """
