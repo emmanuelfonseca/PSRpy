@@ -54,8 +54,9 @@ class ReadPar():
                 setattr(self, parname, parvalue)
                 # the following is for 'RAJ', 'DECJ' that have flags/errors.
                 if (len(lsplit) > 2):
-                    self.fit_parameters.append(parname)
                     setattr(self, parname + 'flag', np.int(lsplit[2]))
+                    if (np.int(lsplit[2]) == 1):
+                        self.fit_parameters.append(parname)
                 if (len(lsplit) > 3):
                     setattr(self, parname + 'err', efac * np.float(lsplit[3]))
 
@@ -73,10 +74,10 @@ class ReadPar():
                 if (parvalue == 'KIN'):
                     setattr(self, parname, parvalue)
                 else:
-                    setattr(self, parname, np.float(parvalue))
+                    setattr(self, parname, np.longdouble(parvalue))
                 # set flag and error attributes if present in parfile.
                 if (len(lsplit) > 2):
-                    if (parname != 'START' and parname != 'FINISH'):
+                    if (parname != 'START' and parname != 'FINISH' and np.int(lsplit[2]) == 1):
                         self.fit_parameters.append(parname)
                     setattr(self,parname+'flag',np.int(lsplit[2]))
                 if (len(lsplit) > 3):
@@ -86,13 +87,22 @@ class ReadPar():
 
             # store JUMP/EFAC/EQUAD as float, but values have different indeces.
             elif (parname in error_list):
-                parname += '_' + lsplit[2]
-                self.fit_parameters.append(parname)
-                setattr(self, parname, np.float(lsplit[3]))
-                if (len(lsplit) > 4):
-                    setattr(self, parname + 'flag', efac * np.float(lsplit[4]))
-                if (len(lsplit) > 5):
-                    setattr(self, parname + 'err', efac * np.float(lsplit[5]))
+                if (parname == 'JUMP'):
+                    parname += '_' + lsplit[2]
+                    self.fit_parameters.append(parname)
+                    setattr(self, parname, np.float(lsplit[3]))
+                    if (len(lsplit) > 4):
+                        setattr(self, parname + 'flag', efac * np.float(lsplit[4]))
+                    if (len(lsplit) > 5):
+                        setattr(self, parname + 'err', efac * np.float(lsplit[5]))
+                else:
+                    setattr(self, parname, np.float(parvalue))
+                    if (len(lsplit) > 2):
+                        if (np.int(lsplit[2] == 1)):
+                            self.fit_parameters.append(parname)
+                        setattr(self,parname+'flag',np.int(lsplit[2]))
+                    if (len(lsplit) > 3):
+                        setattr(self,parname+'err',np.float(efac*lsplit[3]))
 
             parorder.append(parname)
 
