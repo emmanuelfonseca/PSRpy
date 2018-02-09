@@ -77,9 +77,9 @@ def ecc_anomaly(ma, ecc, ea0=0.5):
 
     # otherwise, do single calculation and leave as scalar.
     else:
-        ea = ma
+        ea = ma_in
         for i in range(100):
-           f  = ea - ecc * np.sin(ea) - ma
+           f  = ea - ecc * np.sin(ea) - ma_in
            fp = 1 - ecc * np.cos(ea)
            ea -= f / fp
            if (np.fabs(ea - ea0) < 1e-12):
@@ -87,6 +87,7 @@ def ecc_anomaly(ma, ecc, ea0=0.5):
            ea0 = ea
 
     ea /= d2r
+    ea %= 360.
 
     # make sure that 0 < EA < 360
     if (isinstance(ea, np.ndarray) and np.any(ea < 0)):
@@ -134,7 +135,7 @@ def peri_omega(om0, pb, ta, omdot=0):
         - periastron argument [deg]
     """
     pb_in = pb / 365.25 # convert to years.
-    om = om0 + omdot * ta * pb / 2 / np.pi % 360
+    om = (om0 + omdot * ta * pb_in / 360) % 360
     return om
 
 def mass_function(pb, x):
@@ -151,3 +152,10 @@ def mass_function(pb, x):
 
     nb = 2 * np.pi / pb / 86400
     return nb**2 * x**3 / T_sun
+
+def minimum_companion_mass(pb, x, mp=1.4, sini=1.0):
+    """
+    Computes the minimum
+    """
+
+    pass
