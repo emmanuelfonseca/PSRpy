@@ -4,35 +4,61 @@ from PSRpy.const import c, G, M_sun, pc, R0, R0_err, v0, v0_err
 from numpy import sin, cos, sqrt
 import numpy as np
 
-d2r   = np.pi / 180
+d2r = np.pi / 180
 
-def doppler(d,derr,b,l,mu,muerr):
+def doppler(distance, distance_err, gal_b, gal_l, mu, mu_err):
     """
-    Calculate Doppler-bias contribution (i.e. D-dot/D) to orbital decay 
+    Calculates Doppler-bias contribution (i.e. D-dot/D) to orbital decay 
     measurement.
+
+    Inputs
+    ------
+
+    distance : float
+        Distance to pulsar, in units of kpc.
+
+    distance_err : float
+        Uncertainty in distance, in units of kpc.
+
+    gal_b : float
+        Galactic latitude, in units of radians.
+
+    gal_l : float
+        Galactic longitude, in units of radians.
+
+    mu : float
+        Composite proper motion, in units of milliarcseconds per year.
+
+    mu_err : float
+        Uncertainty in proper motion, in units of milliarcseconds per year.
     """
+
     # header stuff.
-    R0new, R0_errnew = np.array([R0,R0_err])*pc*1000.   # convert to m
-    v0new, v0_errnew = np.array([v0,v0_err])*1000.      # convert to m/s
-    z      = d*sin(b)
-    d     *= pc*1000.
-    derr  *= pc*1000.
-    mu    *= 1. / 1000. / 3600. * d2r / 86400. / 365.25
-    muerr *= 1. / 1000. / 3600. * d2r / 86400. / 365.25
-    beta   = d/R0new*cos(b)-cos(l)
-    den    = sin(l)**2+beta**2
-    # expected bias from Galactic potential, diff. acceleration 
-    # and Shklovskii effect.
+    R0new, R0_errnew = np.array([R0, R0_err]) *pc * 1000.   # convert to m
+    v0new, v0_errnew = np.array([v0, v0_err]) * 1000.      # convert to m/s
+    d = distance * pc * 1000.
+    derr = distance_err * pc * 1000.
+    z = distance * sin(gal_b)
+    mu_in = mu / 1000. / 3600. * d2r / 86400. / 365.25
+    mu_in_err = mu_err / 1000. / 3600. * d2r / 86400. / 365.25
+    beta = d / R0new * cos(gal_b) - cos(gal_l)
+    den = sin(gal_l)**2 + beta**2 
+
+    # expected bias from Galactic potential, diff. acceleration, and Shklovskii effect.
     c1, c2, c3, c4 = -1.08e-19, 1.25, 0.0324, 0.58
-    galpot = c1*(c2*z/sqrt(z**2+c3)+c4*z)*sin(b)
-    galrel = -cos(b)*(v0new**2)/R0new*(cos(l)+beta/den)/c
-    shklov = (mu**2)*d/c
+    galpot = c1 * (c2 * z / sqrt(z**2 + c3) + c4 * z) * sin(gal_b)
+    galrel = -cos(gal_b) * (v0new**2) / R0new * (cos(gal_l) + beta / den) / c
+    shklov = (mu_in**2) * d / c
+
     # now compute uncertainty.
-    dgalpotdd = c1*sin(b)*sin(b)*(c2/sqrt(z**2+c3)-c2*z**2/(z**2+c3)**(1.5)+c4)/pc/1000.
-    dgalreldd = (v0new*cos(b)/R0new)**(2)/den/c*(1.-2.*(beta**2)/den)
-    dshklovdd = (mu**2)/c
-    dshklovdm = 2.*mu*d/c
-    err  = sqrt(((dgalpotdd+dgalreldd+dshklovdd)*derr)**2+(dshklovdm*muerr)**2)
+    dgalpotdd = c1 * sin(gal_b) * sin(gal_b) * (c2 / sqrt(z**2 + c3) - c2 * z**2 / \
+                (z**2 + c3)**(1.5) + c4) / pc / 1000.
+    dgalreldd = (v0new * cos(gal_b) / R0new)**(2) / den / c * (1. - 2. * (beta**2) / den)
+    dshklovdd = (mu_in**2) / c
+    dshklovdm = 2 * mu_in * d / c
+    err = np.array([np.fabs(dgalpotdd) * derr, np.fabs(dgalreldd) * derr, 
+          sqrt((dshklovdd * derr)**2 + (dshklovdm * mu_in_err)**2)])
+
     return np.array([galpot,galrel,shklov]), err
 
 
