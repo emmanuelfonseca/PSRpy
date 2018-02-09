@@ -7,6 +7,13 @@ class ReadTOAs:
 
     def __init__(self, timfile):
 
+        self.TOAs = []
+        self.jump_parameters = []
+        self.jump_labels = []
+        self.TOA_uncertainties = []
+
+        jump_count = 0
+ 
         for line in file(timfile):
 
             if ("MODE" in line):
@@ -25,7 +32,14 @@ class ReadTOAs:
                 pass
 
             elif ("JUMP" in line):
-                print line
+
+                jump_count += 1
+
+                if (jump_count % 2 != 0):
+                    if (jump_count < 10):
+                        self.jump_parameters.append('JUMP_000' + str(jump_count - (jump_count - 1) / 2))
+                    if (jump_count >= 10 and jump_count < 100):
+                        self.jump_parameters.append('JUMP_00' + str(jump_count - (jump_count - 1) / 2))
 
             elif ("INFO" in line):
                 pass
@@ -33,8 +47,17 @@ class ReadTOAs:
             elif ("MODE" in line):
                 pass
 
-            elif (not line):
-                print line
+            else:
+                
+                elems = line.split()
+                self.TOAs.append(np.longdouble(elems[0]))
+                self.TOA_uncertainties.append(np.longdouble(elems[1]))
+                
+                if (jump_count % 2 == 0):
+                    self.jump_labels.append('base')
 
-    def stats(self):
-        pass
+                else:
+                    self.jump_labels.append('JUMP_000' + str(jump_count - (jump_count - 1) / 2))
+
+        self.TOAs = np.array(self.TOAs, dtype=np.longdouble)
+        self.TOA_uncertainties = np.array(self.TOA_uncertainties, dtype=np.longdouble)
