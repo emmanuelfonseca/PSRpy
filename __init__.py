@@ -9,3 +9,4 @@ from . import profile
 from . import simulate
 from . import tempo
 from . import timfile
+from . import utils
