@@ -65,7 +65,8 @@ def edot_GR(m1, m2, pb, e):
     """
     Calculates rate of circularization from GR.
     """
-    nb = 2 * np.pi / pb
+
+    nb = 2 * np.pi / pb / 86400
     eterm = (1 + (121./304.) * e**2) / (1 - e**2)**(5./2.)
     A = -304. / 15. * T_sun**(5./3.) * nb**(8./3.) * eterm
     return A * m1 * m2 / (m1 + m2)**(1./3.) * e

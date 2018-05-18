@@ -1,10 +1,13 @@
 #! /usr/bin/python
 
 from PSRpy.const import au, c, d2r, pc, T_sun
-import ssbfuncs as ssb
 import orbvectors as ov
+import ssbfuncs as ssb
 import orbfuncs as o
+import mpmath as mp
 import numpy as np
+
+mp.mp.prec = 80
 
 def roemer_delay_ssb(epoch, ecl_b, ecl_l):
     """
@@ -155,7 +158,8 @@ def annual_orbital_parallax_delay(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, e
     else:
         return np.sum(np.cross(r_earth, s) * np.cross(r_pulsar, s)) / 2 / c / (d * 1000 * pc)
 
-def pulsar_roemer_delay(dates, x, pb, ecc, om, t0, xdot=0, pbdot=0, omdot=0, gamma=0):
+def pulsar_roemer_delay(dates, x, pb, ecc, om, t0, xdot=0, pbdot=0, omdot=0, gamma=0, 
+    tolerance=1e-12, mp_version=False):
     """
     Computes the Roemer timing delay for a pulsar-binary sustem, given the 
     orbital elements and dates. 
@@ -176,13 +180,43 @@ def pulsar_roemer_delay(dates, x, pb, ecc, om, t0, xdot=0, pbdot=0, omdot=0, gam
         - time delay [s]
     """
 
-    ma = o.mean_anomaly(pb, dates, t0, pbdot=pbdot) 
-    ea = o.ecc_anomaly(ma, ecc) 
-    ta = o.true_anomaly(ea, ecc) 
-    om = o.peri_omega(om, pb, ta, omdot=omdot) 
-    se, ce = np.sin(ea * d2r), np.cos(ea * d2r)
-    so, co = np.sin(om * d2r), np.cos(om * d2r)
-    return x * (ce - ecc) * so + x * se * np.sqrt(1 - ecc**2) * co
+    if mp_version:
+        
+        if isinstance(dates, list):
+            roemer_delay = []
+
+            for ii in range(len(dates)):
+                print ii
+                ma = o.mean_anomaly(pb, dates[ii], t0, pbdot=pbdot, mp_version=mp_version) 
+                ea = o.ecc_anomaly(ma, ecc, tolerance=tolerance, mp_version=mp_version) 
+                ta = o.true_anomaly(ea, ecc, mp_version=mp_version) 
+                om = o.peri_omega(om, pb, ta, omdot=omdot) 
+                se, ce = mp.sin(ea * mp.pi / mp.mpf('180')), mp.cos(ea * mp.pi / mp.mpf('180'))
+                so, co = mp.sin(om * mp.pi / mp.mpf('180')), mp.cos(om * mp.pi / mp.mpf('180'))
+                roemer_delay.append(x * (ce - ecc) * so + x * se * np.sqrt(1 - ecc**2) * co)
+
+            return roemer_delay
+
+        else:
+
+            ma = o.mean_anomaly(pb, dates, t0, pbdot=pbdot, mp_version=mp_version) 
+            ea = o.ecc_anomaly(ma, ecc, tolerance=tolerance, mp_version=mp_version) 
+            ta = o.true_anomaly(ea, ecc, mp_version=mp_version) 
+            om = o.peri_omega(om, pb, ta, omdot=omdot, mp_version=mp_version) 
+            se, ce = mp.sin(ea * mp.pi / mp.mpf('180')), mp.cos(ea * mp.pi / mp.mpf('180'))
+            so, co = mp.sin(om * mp.pi / mp.mpf('180')), mp.cos(om * mp.pi / mp.mpf('180'))    
+            return x * (ce - ecc) * so + x * se * mp.sqrt(mp.mpf('1') - mp.power(ecc, 2)) * co
+
+
+    else:
+
+        ma = o.mean_anomaly(pb, dates, t0, pbdot=pbdot) 
+        ea = o.ecc_anomaly(ma, ecc, tolerance=tolerance) 
+        ta = o.true_anomaly(ea, ecc) 
+        om = o.peri_omega(om, pb, ta, omdot=omdot) 
+        se, ce = np.sin(ea * d2r), np.cos(ea * d2r)
+        so, co = np.sin(om * d2r), np.cos(om * d2r)
+        return x * (ce - ecc) * so + x * se * np.sqrt(1 - ecc**2) * co
 
 def pulsar_shapiro_delay(dates, pb, ecc, om, t0, m2, sini, pbdot=0, omdot=0):
     """
