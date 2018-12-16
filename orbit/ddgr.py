@@ -3,7 +3,9 @@
 from PSRpy.const import c, G, M_sun, T_sun
 import numpy as np
 
-pi   = np.pi
+pi = np.pi
+
+# compute the nominal GR parameters.
 
 def gamma_GR(m1, m2, pb, e):
     """
@@ -114,4 +116,23 @@ def etaA(ps, pb, incl, e, eta, lamb):
     se = np.sin(eta)
     sl = np.sin(lamb)
     return -ps / pb * se / sl / si / np.sqrt(1 - e**2)
+
+# compute total mass from OMDOT.
+
+def total_mass_from_omdot(pb, ecc, omdot, omdot_error=None):
+    """
+    Calculate the total mass of the binary system, given a measurement of OMDOT.
+    """
+    pb_in = pb * 86400
+    omdot_in = omdot * pi / 180 / 365.25 / 86400
+    total_mass = (omdot_in / 3 * (pb_in / 2 / pi)**(5./3.) * (1 - ecc**2))**(1.5) / T_sun
+
+    if (omdot_error is not None):
+        omdot_error_in = omdot_error * pi / 180 / 365.25 / 86400
+        total_mass_error = ((pb_in / 2 / pi)**(5./3.) / 3 * (1 - ecc**2))**(1.5) * \
+                           (1.5 * np.sqrt(omdot_in)) * omdot_error_in / T_sun
+        return (total_mass, total_mass_error)
+
+    else:
+        return total_mass
 
