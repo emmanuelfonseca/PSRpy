@@ -242,11 +242,72 @@ def pulsar_roemer_delay_BT(dates, x, pb, ecc, om, t0, xdot=0, pbdot=0, omdot=0, 
 
         return delay
 
-def pulsar_roemer_delay_ELL1(dates, x, pb, eps1, eps2, tasc, xdot=0, pbdot=0, eps1dot=0, eps2dot=0,
-    tolerance=1e-12):
+def pulsar_roemer_delay_ELL1(dates, x, pb, eps1, eps2, tasc, xdot=0, pbdot=0, eps1dot=0, 
+    eps2dot=0, omdot=0, om=0):
     """
+    Computes the Roemer timing delay for a pulsar in a nearly-circular binary system, given the 
+    orbital elements and date(s). The timing formula is taken from 
+
+    Parameters
+    ----------
+
+    dates : float 
+        epoch(s) to evaluate time delay, in units of MJD
+    x : float
+        projected semimajor axis of pulsar orbit, in units of light-seconds.
+    pb : float
+        orbital period, in units of days.
+    eps1 : float 
+        first Laplace-Lagrange parameter.
+    eps2 : float 
+        second Laplace-Lagrange parameter.
+    tasc : float 
+        epoch of passage through the ascending node, in units of MJD
+    xdot : float, optional
+        rate of change in x, in units of 1e-12.
+    pbdot : float, optional
+        rate of change in pb, in units of 1e-12
+    eps1dot : float, optional
+        rate of change in eps1, in units of 1e-12
+    eps2dot : float, optional
+        rate of change in eps2, in units of 1e-12
+    omdot : float, optional
+        rate of change in periastron argument, in units of degree per year.
+    om : float 
+        argument of periastron, in units of degrees.
+
+    Returns
+    -------
+    
+    float
+        Roemer time delay due to near-circular orbital motion, in seconds.
+
+    Notes
+    -----
+
+    The om and omdot parameters can be supplied as optional arguments in order to 
+    properly compute the 'nbbar' term for secular-variation corrections. (See 
+    Equation A11 and A12 in Lange et al.) In the case where omdot is negligible, then 
+    the time-derivative term in A11 vanishes and `nbbar` is approximately equal to `nb`,
+    since t0 = tasc in this case.
 
     """
+
+    # compute orbital elements and their variations from supplied derivatives.
+    nb = 2 * np.pi / pb
+    nbdot = -2 * np.pi / pb**2 * (pbdot * 1e-12)
+    xnew = x + (xdot * 1e-12) * (dates - tasc)
+    eps1new = eps1 + (eps1dot * 1e-12) * (dates - tasc)
+    eps2new = eps2 + (eps2dot * 1e-12) * (dates - tasc)
+    
+    # compute eccentricity terms for proper calculation of effective orbital frequency.
+    t0 = tasc + (om * np.pi / 180) / (nb + (omdot * np.pi / 180 / 365.25 / 86400))
+    nbbar = nb + (omdot * np.pi / 180 / 365.25 / 86400) - nbdot * (t0 - tasc)
+    phi = (nbbar * (dates - tasc) + 0.5 * nbdot * (dates - tasc)**2) % (2 * np.pi)
+
+    # compute delay.
+    delay = xnew * (np.sin(phi) + 0.5 * eps2 * np.sin(2 * phi) - 0.5 * eps1 * np.cos(2 * phi))
+    return delay
 
 def pulsar_shapiro_delay(dates, pb, ecc, om, t0, m2, sini, pbdot=0, omdot=0):
     """
