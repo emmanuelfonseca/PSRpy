@@ -158,26 +158,42 @@ def annual_orbital_parallax_delay(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, e
     else:
         return np.sum(np.cross(r_earth, s) * np.cross(r_pulsar, s)) / 2 / c / (d * 1000 * pc)
 
-def pulsar_roemer_delay(dates, x, pb, ecc, om, t0, xdot=0, pbdot=0, omdot=0, gamma=0, 
+def pulsar_roemer_delay_BT(dates, x, pb, ecc, om, t0, xdot=0, pbdot=0, omdot=0, gamma=0, 
     tolerance=1e-12, mp_version=False):
     """
-    Computes the Roemer timing delay for a pulsar-binary sustem, given the 
-    orbital elements and dates. 
+    Computes the Roemer timing delay for a pulsar in an eccentric binary system, given the 
+    orbital elements and date(s). The timing formula is taken from Blandford & Teukolsky 
+    (ApJ, 1976, 205, 580).
 
-    Inputs:
-        - x = projected semimajor axis [lt-s]
-        - pb = orbital period [days]
-        - ecc = eccentricity [  ]
-        - om  = argument of periastron [deg]
-        - t0 = epoch of periastron passage [MJD] 
-        - dates  = epochs to evaluate delay [MJD]
-        - xdot = time derivatve in x [  ]
-        - pbdot = time derivative in pb [  ]
-        - omdot = time derivative in om [deg / yr]
-        - gamma = parameter for time dilation / gravitational redshift [s]
+    Parameters
+    ----------
 
-    Output:
-        - time delay [s]
+    dates : float 
+        epoch(s) to evaluate time delay, in units of MJD
+    x : float
+        projected semimajor axis of pulsar orbit, in units of light-seconds.
+    pb : float
+        orbital period, in units of days.
+    ecc : float 
+        orbital eccentricity, with 0 <= ecc < 1 for bound orbits.
+    om : float 
+        argument of periastron, in units of degrees.
+    t0 : float 
+        epoch of periastron passage, in units of MJD
+    xdot : float, optional
+        rate of change in x, in units of 1e-12.
+    pbdot : float, optional
+        rate of change in pb, in units of 1e-12
+    omdot : float, optional
+        rate of change in periastron argument, in units of degree per year.
+    gamma : float, optional 
+        parameter for time dilation / gravitational redshift, in units of seconds.
+
+    Returns
+    -------
+    
+    float
+        Roemer time delay due to orbital motion, in seconds.
     """
 
     if mp_version:
@@ -205,18 +221,32 @@ def pulsar_roemer_delay(dates, x, pb, ecc, om, t0, xdot=0, pbdot=0, omdot=0, gam
             om = o.peri_omega(om, pb, ta, omdot=omdot, mp_version=mp_version) 
             se, ce = mp.sin(ea * mp.pi / mp.mpf('180')), mp.cos(ea * mp.pi / mp.mpf('180'))
             so, co = mp.sin(om * mp.pi / mp.mpf('180')), mp.cos(om * mp.pi / mp.mpf('180'))    
-            return x * (ce - ecc) * so + x * se * mp.sqrt(mp.mpf('1') - mp.power(ecc, 2)) * co
 
+            return x * (ce - ecc) * so + x * se * mp.sqrt(mp.mpf('1') - mp.power(ecc, 2)) * co
 
     else:
 
+        # first, compute Keplerian term.
         ma = o.mean_anomaly(pb, dates, t0, pbdot=pbdot) 
         ea = o.ecc_anomaly(ma, ecc, tolerance=tolerance) 
         ta = o.true_anomaly(ea, ecc) 
         om = o.peri_omega(om, pb, ta, omdot=omdot) 
         se, ce = np.sin(ea * d2r), np.cos(ea * d2r)
         so, co = np.sin(om * d2r), np.cos(om * d2r)
-        return x * (ce - ecc) * so + x * se * np.sqrt(1 - ecc**2) * co
+        alpha = x * so
+        beta = np.sqrt(1 - ecc**2) * x * co
+        delay = alpha * (ce - ecc) + (beta + gamma) * se
+
+        # next, compute second-order correction term.
+        delay += (alpha * se - beta * ce) * delay / (pb / 2 / np.pi) / (1 - ecc * ce)
+
+        return delay
+
+def pulsar_roemer_delay_ELL1(dates, x, pb, eps1, eps2, tasc, xdot=0, pbdot=0, eps1dot=0, eps2dot=0,
+    tolerance=1e-12):
+    """
+
+    """
 
 def pulsar_shapiro_delay(dates, pb, ecc, om, t0, m2, sini, pbdot=0, omdot=0):
     """
