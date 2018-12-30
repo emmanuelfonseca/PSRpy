@@ -153,32 +153,53 @@ def true_anomaly(ea, ecc, mp_version=False):
      
     return ta 
 
-def peri_omega(om0, pb, ta, omdot=0, mp_version=False):
+def periastron_argument(om0, pb, ecc, t, t0, pbdot=0, omdot=0, binary_model="DD", tolerance=1e-12):
     """
-    Computes periastron argument as a function of time, given initial 
-    value, orbital pb, true anomaly (ta) and periastron advance.
+    Computes periastron argument at a given point in time (or true anomaly). 
 
-    Inputs:
-        - om0 = periastron argument [deg]
-        - pb = orbital period [days]
-        - ta = true anomaly [deg]
-        - omdot = time derivative of periastron argument [deg / yr]
+    Parameters
+    ----------
 
-    Output:
-        - periastron argument [deg]
+    om0 : float 
+        argument of periastron measured at a reference time t0, in units of degrees
+    pb : float 
+        orbital period, in units of days
+    ecc : float
+        orbital eccentricity
+    t : float
+        epoch to evaluate argument of periastron, in units of MJD
+    t0 : float
+        epoch of periastron passage, in units of MJD
+    pbdot : float, optional
+        rate of change in orbital period, in units of 1e-12
+    omdot : float, optional
+        rate of change in argument of periastron, in units of degrees per year
+    binary_model : {'DD', 'DDGR', 'BT'}
+        short name for binary model to use in calculating argument of periastron
+    tolerance : float, optional
+        tolerance used to Newton-Raphson evaluation of eccentric anomaly 
+        (default value is 1e-12)
+
+    Returns
+    -------
+
+    float 
+        periastron argument, in units of degrees
     """
 
-    om = 0
+    om = om0
 
-    if mp_version:
-        pb_in = pb / mp.mpf('365.25') # convert to years.
-        om = (om0 + omdot * ta * pb_in / mp.mpf('360')) % 360
+    if (binary_model == "DD" or binary_model == "DDGR"):
+        ma = mean_anomaly(pb, t, t0, pbdot=(pbdot * 1e-12))
+        ea = ecc_anomaly(ma, ecc, tolerance=tolerance)
+        ta = true_anomaly(ea, ecc)
 
-    else:
-        pb_in = pb / 365.25 # convert to years.
-        om = (om0 + omdot * ta * pb_in / 360) % 360
+        om += omdot * ta * (pb / 365.25) / 360
 
-    return om
+    elif (binary_model == "BT"):
+        om += omdot * ((t - t0) / 365.25)
+
+    return om % 360
 
 def mass_function(pb, x):
     """
