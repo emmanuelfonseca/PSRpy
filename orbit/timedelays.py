@@ -225,8 +225,8 @@ def pulsar_roemer_delay(dates, orbital_elements, xdot=0, pbdot=0, omdot=0, gamma
         # first, compute Keplerian term.
         ma = o.mean_anomaly(pb, dates, t0, pbdot=(pbdot * 1e-12)) 
         ea = o.ecc_anomaly(ma, ecc, tolerance=tolerance) 
-        ta = o.true_anomaly(ea, ecc) 
-        om = o.periastron_argument(om, pb, dates, ta, t0, omdot=omdot, binary_model=binary_model) 
+        om = o.periastron_argument(om, pb, ecc, dates, t0, pbdot=pbdot, omdot=omdot, 
+                                   binary_model=binary_model, tolerance=tolerance) 
         se, ce = np.sin(ea * d2r), np.cos(ea * d2r)
         so, co = np.sin(om * d2r), np.cos(om * d2r)
         alpha = (x + (xdot * 1e-12) * (dates - t0)) * so
