@@ -7,7 +7,7 @@ import sys
 
 mp.mp.prec = 80
 
-def mean_anomaly(pb, t, t0, pbdot=0, mp_version=False):
+def mean_anomaly(pb, t, t0, pbdot=0):
     """
     Computes mean anomaly, given orbital period and time parameters.
 
@@ -32,10 +32,6 @@ def mean_anomaly(pb, t, t0, pbdot=0, mp_version=False):
     pbdot *= 86400
     ma = 360 / pb * (dt - 0.5 * pbdot / pb * dt**2) % 360
 
-    # compute mpmath version, if desired.
-    if mp_version:
-        ma = mp.mpf('360') / pb * (dt - mp.mpf('0.5') * pbdot / pb * dt**2) % 360
-
     # make sure that 0 < ma < 360
     if (isinstance(ma, np.ndarray) and np.any(ma < 0)):
         ma[np.where(ma < 0)] += 360
@@ -44,7 +40,7 @@ def mean_anomaly(pb, t, t0, pbdot=0, mp_version=False):
 
     return ma
 
-def ecc_anomaly(ma, ecc, ea0=0.5, tolerance=1e-12, mp_version=False):
+def ecc_anomaly(ma, ecc, ea0=0.5, tolerance=1e-12):
     """
     Computes eccentric anomaly, given mean anomaly and eccentricity.
 
@@ -59,9 +55,6 @@ def ecc_anomaly(ma, ecc, ea0=0.5, tolerance=1e-12, mp_version=False):
 
     ma_in = ma * d2r    
     ea = 0
-
-    if mp_version:
-        ma_in = ma * mp.pi / mp.mpf('180')
 
     # if MA is an array, loop over each entry and apply N-R method.
     if (isinstance(ma, np.ndarray)):
@@ -89,29 +82,15 @@ def ecc_anomaly(ma, ecc, ea0=0.5, tolerance=1e-12, mp_version=False):
     # otherwise, do single calculation and leave as scalar.
     else:
 
-        if mp_version:
-            ma_in = ma * mp.pi / mp.mpf('180')
-            ea0_mp = mp.mpf(str(ea0))
-            ea = ma_in
-            for i in range(100):
-               f  = ea - ecc * mp.sin(ea) - ma_in
-               fp = mp.mpf('1') - ecc * mp.cos(ea)
-               ea -= f / fp
-               if (mp.fabs(ea - ea0_mp) < mp.mpf(str(tolerance))):
-                   break
-               ea0 = ea
-            ea /= (mp.pi / mp.mpf('180'))
-
-        else:
-            ea = ma_in
-            for i in range(100):
-               f  = ea - ecc * np.sin(ea) - ma_in
-               fp = 1 - ecc * np.cos(ea)
-               ea -= f / fp
-               if (np.fabs(ea - ea0) < 1e-12):
-                   break
-               ea0 = ea
-            ea /= d2r
+        ea = ma_in
+        for i in range(100):
+           f  = ea - ecc * np.sin(ea) - ma_in
+           fp = 1 - ecc * np.cos(ea)
+           ea -= f / fp
+           if (np.fabs(ea - ea0) < 1e-12):
+               break
+           ea0 = ea
+        ea /= d2r
 
     ea %= 360
 
@@ -123,7 +102,7 @@ def ecc_anomaly(ma, ecc, ea0=0.5, tolerance=1e-12, mp_version=False):
 
     return ea 
 
-def true_anomaly(ea, ecc, mp_version=False):
+def true_anomaly(ea, ecc):
     """
     Computes true anomaly, given eccentric anomaly and eccentricity.
 
@@ -136,14 +115,8 @@ def true_anomaly(ea, ecc, mp_version=False):
     """
 
     ta = 0
-
-    if mp_version:
-        ea_in = ea * mp.pi / mp.mpf('180')
-        ta = 2 * mp.atan(mp.sqrt((1 + ecc) / (1 - ecc)) * mp.tan(ea_in / 2)) / (mp.pi / mp.mpf('180'))
-
-    else:
-        ea_in = ea * d2r
-        ta = 2 * np.arctan(np.sqrt((1 + ecc) / (1 - ecc)) * np.tan(ea_in / 2)) / d2r
+    ea_in = ea * d2r
+    ta = 2 * np.arctan(np.sqrt((1 + ecc) / (1 - ecc)) * np.tan(ea_in / 2)) / d2r
 
     # make sure that 0 < TA < 360
     if (isinstance(ta, np.ndarray) and np.any(ta < 0)):
