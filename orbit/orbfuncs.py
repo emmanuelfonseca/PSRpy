@@ -189,9 +189,27 @@ def mass_function(pb, x):
     nb = 2 * np.pi / pb / 86400
     return nb**2 * x**3 / T_sun
 
-def minimum_companion_mass(pb, x, mp=1.4, sini=1.0):
+def minimum_companion_mass(pb, x, mc=0.5, mp=1.4, sini=1.0, tolerance=1e-12):
     """
     Computes the minimum
     """
 
-    pass
+    # compute mass function.
+    mf = mass_function(pb, x)
+    
+    # now use a Newton-Raphson method for determining the companion mass 
+    # from the mass function, for an arbitrary value of sini.
+    mc_current = mc 
+    mc_before = mc 
+
+    for ii in range(100):
+        g = (mc_current * sini)**3 / (mp + mc_current)**2 - mf
+        dgdmc = mc_current**2 * sini**3 * (mc_current + 3 * mp) / (mp + mc_current)**3
+        mc_current -= (g / dgdmc)
+
+        if (np.fabs(mc_current - mc_before) < tolerance):
+            break
+
+        mc_before = mc_current
+
+    return mc_current
