@@ -3,7 +3,7 @@
 from re import match
 from PSRpy.const import c, G, M_sun, T_sun
 from astropy.coordinates import Angle
-from config_parfile import string_list, error_list, int_list
+from .config_parfile import string_list, error_list, int_list
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np

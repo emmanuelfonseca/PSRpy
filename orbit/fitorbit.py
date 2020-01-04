@@ -69,7 +69,7 @@ def fit_orbit(pars, mjds, periods, periods_errs, circular=False):
             return np.sum(((periods - model) / periods_errs)**2)
 
     result = minimize(chisq, pars, method='Nelder-Mead')
-    print "Fit success: {0}".format(result.success)
+    print("Fit success: {0}".format(result.success))
 
     pars = result.x
     plt.subplot(211)
@@ -96,15 +96,15 @@ def fit_orbit(pars, mjds, periods, periods_errs, circular=False):
     plt.grid()
     plt.show()
 
-    print "Final parameter estimates:"
-    print "    * PS = {0:.9f} ms".format(pars[0])
-    print "    * A1 = {0:.9f} lt-s".format(pars[1])
-    print "    * PB = {0:.9f} days".format(pars[2])
+    print("Final parameter estimates:")
+    print("    * PS = {0:.9f} ms".format(pars[0]))
+    print("    * A1 = {0:.9f} lt-s".format(pars[1]))
+    print("    * PB = {0:.9f} days".format(pars[2]))
     if circular:
-        print "    * T0 = {0:.9f} MJD".format(pars[3])
+        print("    * T0 = {0:.9f} MJD".format(pars[3]))
     else:
-        print "    * E  = {0:.9f}".format(pars[3])
-        print "    * OM = {0:.9f} deg".format(pars[4])
-        print "    * T0 = {0:.9f} MJD".format(pars[5])
+        print("    * E  = {0:.9f}".format(pars[3]))
+        print("    * OM = {0:.9f} deg".format(pars[4]))
+        print("    * T0 = {0:.9f} MJD".format(pars[5]))
 
     return pars

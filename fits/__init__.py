@@ -1,1 +1,1 @@
-from readfits import ReadFits
+from .readfits import ReadFits

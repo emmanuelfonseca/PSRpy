@@ -60,14 +60,14 @@ class ReadFits():
         Prints basic info of input file.
         """
 
-        print "Basic header info for file '{0}':".format(self.inputfile)
-        print "    * Date of observation: {0} (started at {1})".format(self.epoch, self.starttime)
-        print "    * Project ID and telescope: {0} ({1})".format(self.projectID, self.telescope)
-        print "    * Observer: {0}".format(self.observer)
-        print "    * Source: {0}".format(self.source)
-        print "    * Receiver: {0}".format(self.receiver)
-        print "    * Backend: {0}".format(self.backend)
-        print "    * Mode: {0}".format(self.mode)
+        print("Basic header info for file '{0}':".format(self.inputfile))
+        print("    * Date of observation: {0} (started at {1})".format(self.epoch, self.starttime))
+        print("    * Project ID and telescope: {0} ({1})".format(self.projectID, self.telescope))
+        print("    * Observer: {0}".format(self.observer))
+        print("    * Source: {0}".format(self.source))
+        print("    * Receiver: {0}".format(self.receiver))
+        print("    * Backend: {0}".format(self.backend))
+        print("    * Mode: {0}".format(self.mode))
 
     def dedisperse(self, reference_freq=430.):
         """
@@ -111,7 +111,7 @@ class ReadFits():
 
         else:
         
-            print "WARNING: requested bin number not even number! Proceeding with original data..."
+            print("WARNING: requested bin number not even number! Proceeding with original data...")
             return chan_data
 
     def remove_baseline(self, phase_range=[0.7, 0.8]):

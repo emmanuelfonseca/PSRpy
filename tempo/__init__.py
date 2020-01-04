@@ -1,2 +1,2 @@
-from residuals import Residuals
-from matrix import Matrix
+from .residuals import Residuals
+from .matrix import Matrix

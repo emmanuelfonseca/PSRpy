@@ -1,9 +1,9 @@
 #! /usr/bin/python
 
 from matplotlib.font_manager import FontProperties
-from PSRpy.const import T_sun, d2r
-from PSRpy.parfile import DerivePar
-from pkcorr import doppler
+from ..const import T_sun, d2r
+from ..parfile import DerivePar
+from .pkcorr import doppler
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -222,7 +222,7 @@ class M1M2():
         if (any(om1s)):
             om1smed = om1s[0]
             om1serr = om1s[1:]
-            print om1serr
+            print(om1serr)
             m2om1sh, m2om1sl = om1spin_m1m2(om1smed, om1serr, pb, e, m1, npts)
             setattr(self,'OM1SPIN_U',m2om1sh)
             setattr(self,'OM1SPIN_L',m2om1sl)

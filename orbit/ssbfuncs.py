@@ -1,8 +1,8 @@
 #! /usr/bin/python
 
-from ssb_data import ssb_planet_positions
-from PSRpy.orbit import ecc_anomaly
-from PSRpy.const import d2r
+from .ssb_data import ssb_planet_positions
+from .elements import ecc_anomaly
+from ..const import d2r
 import numpy as np
 import sys
 

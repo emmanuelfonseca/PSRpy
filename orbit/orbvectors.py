@@ -1,7 +1,7 @@
-#! /usr/bin/pythin
+#! /usr/bin/python
 
-from PSRpy.const import au, c, d2r
-import orbfuncs as of
+from .elements import mean_anomaly, ecc_anomaly, true_anomaly
+from ..const import au, c, d2r
 import numpy as np
 import sys
 
@@ -35,9 +35,9 @@ def radius_eccentric_orbit(x, pb, ecc, om, t0, t, incl, asc, ecl_b=None, ecl_l=N
     so, co = np.sin(asc_in), np.cos(asc_in)
     si, ci = np.sin(incl_in), np.cos(incl_in)
 
-    ma = of.mean_anomaly(pb, t, t0)
-    ea = of.ecc_anomaly(ma, ecc)
-    ta = of.true_anomaly(ea, ecc)
+    ma = mean_anomaly(pb, t, t0)
+    ea = ecc_anomaly(ma, ecc)
+    ta = true_anomaly(ea, ecc)
     tot = (om + ta) * d2r
 
     # compute length of vector.
