@@ -11,7 +11,7 @@ def readResiduals(in_c_file):
     DataDict = {}
     in_mjd, in_res, in_reserr, in_orbphs = [], [], [], []
 
-    for line in file(in_c_file):
+    for line in open(in_c_file, "r").readlines():
         
         if ('#' not in line):
             elements = line.split()
