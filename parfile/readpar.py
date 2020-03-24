@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-pi   = np.pi
+pi = np.pi
 
 class ReadPar():
     """
@@ -39,7 +39,7 @@ class ReadPar():
         self.fit_parameters = []
         parorder = []
 
-        for line in file(infile):
+        for line in open(infile, "r").readlines():
             lsplit = line.split()
 
             # if this line is commented out, then skip.
@@ -95,6 +95,11 @@ class ReadPar():
                         setattr(self, parname + 'flag', efac * np.float(lsplit[4]))
                     if (len(lsplit) > 5):
                         setattr(self, parname + 'err', efac * np.float(lsplit[5]))
+                
+                # treat TEMPO2 parameter names somewhat differently.
+                elif (parname in ["T2EFAC", "T2EQUAD", "ECORR"]):
+                    setattr(self, "{0}_{1}".format(parname, lsplit[2]) , np.float(lsplit[3]))
+
                 else:
                     setattr(self, parname, np.float(parvalue))
                     if (len(lsplit) > 2):
