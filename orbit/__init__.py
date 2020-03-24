@@ -1,6 +1,7 @@
-from orbfuncs import *
-import ddgr
-import m1m2
-import pkcorr
-import ssbfuncs
-import timedelays
+from . import elements
+from . import ddgr
+from . import m1m2
+from . import pkcorr
+from . import ssbfuncs
+from . import orbvectors
+from . import timedelays

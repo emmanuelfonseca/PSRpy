@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-from PSRpy.const import c, G, M_sun, T_sun
+from ..const import c, G, M_sun, T_sun
 import numpy as np
 
 pi = np.pi

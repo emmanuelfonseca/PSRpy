@@ -1,3 +1,5 @@
+#! /usr/bin/python 
+
 colors_residuals = ['firebrick', 'royalblue', 'darkmagenta', 'dimgray', 'lightcoral', 'blueviolet', 'brown', 
                     'crimson', 'darkolivegreen', 'lightcoral', 'darkcyan']
 

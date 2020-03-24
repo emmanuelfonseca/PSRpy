@@ -89,7 +89,7 @@ def tan_d(x):
         i += 2
         fact *= i * (i - 1)
         num *= x * x
-        print bernoulli_lookup(i)
+        print(bernoulli_lookup(i))
         s += num / fact * bernoulli(dp.Decimal(i)) * dp.Decimal('-4')**(i / 2) * \
                 (1 - dp.Decimal('4')**(i / 2))
 

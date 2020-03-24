@@ -102,7 +102,7 @@ def smooth_pca(indat, ncomp=5):
     nmes = len(indat[0,:])
     ndim = len(indat[:,0])
 
-    print 'PCA on data with {0} dimensions, {1} measurements:'.format(ndim,nmes)
+    print('PCA on data with {0} dimensions, {1} measurements:'.format(ndim,nmes))
 
     # subtract mean from each set of measurements.
     dmean  = np.mean(indat,axis=1)

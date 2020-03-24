@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-from config_parfile import parameter_list, string_list, int_list, error_list, spin_freq_derivatives
+from .config_parfile import parameter_list, string_list, int_list, error_list, spin_freq_derivatives
 import numpy as np
 import sys
 

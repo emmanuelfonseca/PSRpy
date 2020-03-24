@@ -49,8 +49,8 @@ def structfunc(inf,nbinsmax=20,rmbias=False):
 
   # print some info.
   minlag, maxlag = np.min(lags), np.max(lags)
-  print "Total number of unique values: {}.".format(len(dmxsq))
-  print "Min, max lag: {0:.3f}, {1:.3f} days.".format(minlag,maxlag)
+  print("Total number of unique values: {}.".format(len(dmxsq)))
+  print("Min, max lag: {0:.3f}, {1:.3f} days.".format(minlag,maxlag))
 
   # get lag bins and structure function, evenly spaced in log_10.
   ulag    = np.unique(lags)

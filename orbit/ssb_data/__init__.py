@@ -1,1 +1,1 @@
-from aprx_ssbpos_planets import ssb_planet_positions
+from .aprx_ssbpos_planets import ssb_planet_positions

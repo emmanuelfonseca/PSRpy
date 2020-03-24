@@ -1,10 +1,24 @@
 #! /usr/bin/python -B
 
-from config_tempo import colors_residuals
 import numpy as np
 import sys
 
 __all__ = ["Residuals"]
+
+# define color scheme to use for plotting residuals.
+colors_residuals = [
+    'firebrick', 
+    'royalblue', 
+    'darkmagenta', 
+    'dimgray', 
+    'lightcoral', 
+    'blueviolet', 
+    'brown',
+    'crimson', 
+    'darkolivegreen', 
+    'lightcoral', 
+    'darkcyan'
+]
 
 class Residuals:
     """
@@ -148,7 +162,7 @@ class Residuals:
         setattr(self, 'median_uncertainty', np.median(self.uncertainty))
 
         if (verbose):
-            print "Residual statistics for {0}".format(self.inputfile)
-            print "    * number of residuals: {0}".format(self.Ntoa)
-            print "    * RMS residual: {0:.3f} microsec".format(self.rms)
-            print "    * ... weighted: {0:.3f} microsec".format(self.rms_weighted)
+            print("Residual statistics for {0}".format(self.inputfile))
+            print("    * number of residuals: {0}".format(self.Ntoa))
+            print("    * RMS residual: {0:.3f} microsec".format(self.rms))
+            print("    * ... weighted: {0:.3f} microsec".format(self.rms_weighted))

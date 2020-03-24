@@ -1,11 +1,8 @@
-#! /usr/bin/pythin
+#! /usr/bin/python
 
-from PSRpy.const import d2r, T_sun
-import mpmath as mp
+from ..const import d2r, T_sun
 import numpy as np
 import sys
-
-mp.mp.prec = 80
 
 def mean_anomaly(pb, t, t0, pbdot=0):
     """

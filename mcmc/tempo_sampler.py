@@ -207,7 +207,7 @@ class TempoMCMC():
                 mv_command = Popen(['mv', 'mcmc_proposal.par', 'mcmc_current.par'], stdout=PIPE)
                 run_mv, out_mc = mv_command.communicate()
                 success_count += 1
-                print success_count, iternum + 1
+                print(success_count, iternum + 1)
 
             else:
                 setattr(self, 'par_object', deepcopy(current_par))

@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-from PSRpy.const import c, G, M_sun, pc, R0, R0_err, v0, v0_err
+from ..const import c, G, M_sun, pc, R0, R0_err, v0, v0_err
 from numpy import sin, cos, sqrt
 import numpy as np
 
