@@ -5,3 +5,4 @@ from . import pkcorr
 from . import ssbfuncs
 from . import orbvectors
 from . import timedelays
+from . import velocities
