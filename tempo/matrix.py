@@ -84,11 +84,11 @@ class Matrix:
 
         num = ff(fd, formats='i4', shape=1)
         num = int(num[0][0])
-        num = (num - 29) / 8
+        num = int((num - 29) / 8)
 
         # declare objects to be returned.
         self.parlist = []
-        self.covmat  = np.zeros([num, num], dtype=np.float64)
+        self.covmat  = np.zeros((num, num), dtype=np.float64)
         freqder_count = 0
 
         # loop to get data from binary file.
@@ -97,12 +97,13 @@ class Matrix:
             data = ff(fd, dtype=matrix_dtype, shape=1)
             j = int(data['j'][0])
             m = int(data['m'][0])
+            current_label = data['paramj'][0].decode('utf-8')
 
-            if (data['paramj'][0] == ' f*  '):
+            if (current_label == ' f*  '):
                 self.parlist.append('F1'+str(freqder_count))
                 freqder_count += 1
-            else:
-                self.parlist.append(matrix_parameter_labels[data['paramj'][0]])
+            elif ('DX' not in current_label and 'D1' not in current_label):
+                self.parlist.append(matrix_parameter_labels[current_label])
 
             a = ff(fd, formats='f8', shape=m, byteorder='<')
     
