@@ -1,5 +1,6 @@
 from . import elements
 from . import ddgr
+from . import masses
 from . import m1m2
 from . import pkcorr
 from . import ssbfuncs
