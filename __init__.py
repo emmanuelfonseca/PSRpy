@@ -1,3 +1,4 @@
+from . import astrometry
 from . import dm
 from . import fft
 from . import fits
