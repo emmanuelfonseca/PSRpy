@@ -11,6 +11,25 @@ import sys
 
 pi = np.pi
 
+def represents_an_int(input_string):
+    """
+    Checks if string can be represented as a Python integer and returns a boolean.
+    This function is used to evaluate if 
+
+    taken from: https://stackoverflow.com/questions/1265665/how-can-i-check-if-a-string-represents-an-int-without-using-try-except
+    """
+
+    is_an_integer = False
+
+    try:
+        value = int(input_string)
+        is_an_interger = True
+
+    except ValueError:
+        pass
+
+    return is_an_integer
+
 class ReadPar():
     """
     Reads in parfile parameter values, uncertainties and flags as object attributes.
@@ -42,77 +61,99 @@ class ReadPar():
         for line in open(infile, "r").readlines():
             lsplit = line.split()
 
-            # if this line is commented out, then skip.
-            if (lsplit[0] == 'C' or lsplit[0] == '#'):
-                continue
+            if (len(lsplit) != 0):
+                # if this line is commented out, then skip.
+                if (lsplit[0] == 'C' or lsplit[0] == '#'):
+                    continue
 
-            # else, loop will continue.
-            parname, parvalue = lsplit[0], lsplit[1]
+                # else, loop will continue.
+                parname, parvalue = lsplit[0], lsplit[1]
 
-            # set the following attributes as strings.
-            if (parname in string_list):
-                setattr(self, parname, parvalue)
-                # the following is for 'RAJ', 'DECJ' that have flags/errors.
-                if (len(lsplit) > 2):
-                    setattr(self, parname + 'flag', np.int(lsplit[2]))
-                    if (np.int(lsplit[2]) == 1):
-                        self.fit_parameters.append(parname)
-                if (len(lsplit) > 3):
-                    setattr(self, parname + 'err', efac * np.float(lsplit[3]))
-
-            # set these as integers.
-            elif (parname in int_list):
-                setattr(self, parname, np.int(parvalue))
-
-            # otherwise, if not a JUMP, assume it's a fit parameter 
-            # and store value/errors as floats.
-            elif (parname not in error_list):
-                # switch 'D' with 'e' for exponents.
-                if (parvalue.find('D') != -1):
-                    parvalue = parvalue.replace('D','e')
-                # DDK model in TEMPO can have SINI = KIN.
-                if (parvalue == 'KIN'):
+                # set the following attributes as strings.
+                if (parname in string_list):
                     setattr(self, parname, parvalue)
-                else:
-                    setattr(self, parname, np.longdouble(parvalue))
-                # set flag and error attributes if present in parfile.
-                if (len(lsplit) > 2):
-                    if (parname != 'START' and parname != 'FINISH' and np.int(lsplit[2]) == 1):
-                        self.fit_parameters.append(parname)
-                    setattr(self,parname+'flag',np.int(lsplit[2]))
-                if (len(lsplit) > 3):
-                    if (lsplit[3].find('D') != -1):
-                        lsplit[3] = lsplit[3].replace('D','e')
-                    setattr(self,parname+'err',np.float(efac*lsplit[3]))
-
-            # store JUMP/EFAC/EQUAD as float, but values have different indeces.
-            elif (parname in error_list):
-                if (parname == 'JUMP'):
-                    parname += '_' + lsplit[2]
-                    self.fit_parameters.append(parname)
-                    setattr(self, parname, np.float(lsplit[3]))
-                    if (len(lsplit) > 4):
-                        setattr(self, parname + 'flag', efac * np.float(lsplit[4]))
-                    if (len(lsplit) > 5):
-                        setattr(self, parname + 'err', efac * np.float(lsplit[5]))
-                
-                # treat TEMPO2 parameter names somewhat differently.
-                elif (parname in ["T2EFAC", "T2EQUAD", "ECORR"]):
-                    setattr(self, "{0}_{1}".format(parname, lsplit[2]) , np.float(lsplit[3]))
-
-                else:
-                    setattr(self, parname, np.float(parvalue))
+                    # the following is for 'RAJ', 'DECJ' that have flags/errors.
                     if (len(lsplit) > 2):
-                        if (np.int(lsplit[2] == 1)):
-                            self.fit_parameters.append(parname)
-                        setattr(self,parname+'flag',np.int(lsplit[2]))
+                        # check if third element is an integer;
+                        # if not, it is most likely the parameter uncertainty.
+                        # (some ATNF parfiles have this circumstance.)
+                        is_flag = represents_an_int(lsplit[2])
+
+                        if (is_flag):
+                            setattr(self, parname + 'flag', np.int(lsplit[2]))
+                            if (np.int(lsplit[2]) == 1):
+                                self.fit_parameters.append(parname)
+
+                        else:
+                            setattr(self, parname + 'err', np.float(lsplit[2]))
+
                     if (len(lsplit) > 3):
+                        setattr(self, parname + 'err', efac * np.float(lsplit[3]))
+
+                # set these as integers.
+                elif (parname in int_list):
+                    setattr(self, parname, np.int(parvalue))
+
+                # otherwise, if not a JUMP, assume it's a fit parameter 
+                # and store value/errors as floats.
+                elif (parname not in error_list):
+                    # switch 'D' with 'e' for exponents.
+                    if (parvalue.find('D') != -1):
+                        parvalue = parvalue.replace('D','e')
+                    # DDK model in TEMPO can have SINI = KIN.
+                    if (parvalue == 'KIN'):
+                        setattr(self, parname, parvalue)
+                    else:
+                        setattr(self, parname, np.longdouble(parvalue))
+                    # set flag and error attributes if present in parfile.
+                    if (len(lsplit) > 2):
+                        # check if third element is an integer;
+                        # if not, it is most likely the parameter uncertainty.
+                        # (some ATNF parfiles have this circumstance.)
+                        is_flag = represents_an_int(lsplit[2])
+
+                        if (parname != 'START' and parname != 'FINISH' and is_flag):
+                            setattr(self,parname+'flag',np.int(lsplit[2]))
+
+                            if (np.int(lsplit[2]) == 1):
+                                self.fit_parameters.append(parname)
+
+                        elif (parname != 'START' and parname != 'FINISH' and not is_flag):
+                            setattr(self,parname+'err',np.float(lsplit[2]))
+
+                    if (len(lsplit) > 3):
+                        if (lsplit[3].find('D') != -1):
+                            lsplit[3] = lsplit[3].replace('D','e')
                         setattr(self,parname+'err',np.float(efac*lsplit[3]))
 
-            parorder.append(parname)
+                # store JUMP/EFAC/EQUAD as float, but values have different indeces.
+                elif (parname in error_list):
+                    if (parname == 'JUMP'):
+                        parname += '_' + lsplit[2]
+                        self.fit_parameters.append(parname)
+                        setattr(self, parname, np.float(lsplit[3]))
+                        if (len(lsplit) > 4):
+                            setattr(self, parname + 'flag', efac * np.float(lsplit[4]))
+                        if (len(lsplit) > 5):
+                            setattr(self, parname + 'err', efac * np.float(lsplit[5]))
+                
+                    # treat TEMPO2 parameter names somewhat differently.
+                    elif (parname in ["T2EFAC", "T2EQUAD", "ECORR"]):
+                        setattr(self, "{0}_{1}".format(parname, lsplit[2]) , np.float(lsplit[3]))
 
-        # set array of ordered parameters as object attribute.
-        setattr(self, 'parorder', parorder)
+                    else:
+                        setattr(self, parname, np.float(parvalue))
+                        if (len(lsplit) > 2):
+                            if (np.int(lsplit[2] == 1)):
+                                self.fit_parameters.append(parname)
+                            setattr(self,parname+'flag',np.int(lsplit[2]))
+                        if (len(lsplit) > 3):
+                            setattr(self,parname+'err',np.float(efac*lsplit[3]))
+
+                parorder.append(parname)
+
+            # set array of ordered parameters as object attribute.
+            setattr(self, 'parorder', parorder)
 
     def fix(self):
         """

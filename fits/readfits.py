@@ -1,7 +1,7 @@
 #! /usr/bin/python
 
-from PSRpy.dm import dm_time_delay
 from astropy.io import fits
+from ..dm.timedelays import dm_delay
 import PSRpy.fft as ft
 import matplotlib.pyplot as plt
 import numpy as np

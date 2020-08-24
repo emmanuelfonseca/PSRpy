@@ -1,1 +1,1 @@
-from .timedelay import dm_time_delay
+from . import timedelays

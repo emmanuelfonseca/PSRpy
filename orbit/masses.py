@@ -1,3 +1,4 @@
+from ..const import T_sun
 import numpy as np
 
 def mass_function(pb, x):
@@ -61,12 +62,12 @@ def mass_total(pb, ecc, omdot, omdot_error=None):
     """
 
     pb_in = pb * 86400
-    omdot_in = omdot * pi / 180 / 365.25 / 86400
-    total_mass = (omdot_in / 3 * (pb_in / 2 / pi)**(5./3.) * (1 - ecc**2))**(1.5) / T_sun
+    omdot_in = omdot * np.pi / 180 / 365.25 / 86400
+    total_mass = (omdot_in / 3 * (pb_in / 2 / np.pi)**(5./3.) * (1 - ecc**2))**(1.5) / T_sun
 
     if (omdot_error is not None):
-        omdot_error_in = omdot_error * pi / 180 / 365.25 / 86400
-        total_mass_error = ((pb_in / 2 / pi)**(5./3.) / 3 * (1 - ecc**2))**(1.5) * \
+        omdot_error_in = omdot_error * np.pi / 180 / 365.25 / 86400
+        total_mass_error = ((pb_in / 2 / np.pi)**(5./3.) / 3 * (1 - ecc**2))**(1.5) * \
                            (1.5 * np.sqrt(omdot_in)) * omdot_error_in / T_sun
         return (total_mass, total_mass_error)
 

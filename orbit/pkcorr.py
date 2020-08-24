@@ -1,10 +1,11 @@
 #! /usr/bin/python
 
-from ..const import c, G, M_sun, pc, R0, R0_err, v0, v0_err
-from numpy import sin, cos, sqrt
+from PSRpy.const import c, pc, R0, R0_err, v0, v0_err
+from numpy import pi, sin, cos, sqrt
+import astropy.units as u
 import numpy as np
 
-d2r = np.pi / 180
+d2r = pi / 180
 
 def doppler(distance, distance_err, gal_b, gal_l, mu, mu_err):
     """
@@ -47,59 +48,69 @@ def doppler(distance, distance_err, gal_b, gal_l, mu, mu_err):
     # expected bias from Galactic potential, diff. acceleration, and Shklovskii effect.
     c1, c2, c3, c4 = -1.08e-19, 1.25, 0.0324, 0.58
     galpot = c1 * (c2 * z / sqrt(z**2 + c3) + c4 * z) * sin(gal_b)
-    galrel = -cos(gal_b) * (v0new**2) / R0new * (cos(gal_l) + beta / den) / c
-    shklov = (mu_in**2) * d / c
+    galrel = -cos(gal_b) * (v0new**2) / R0new * (cos(gal_l) + beta / den) / c.value
+    shklov = (mu_in**2) * d / c.value
 
     # now compute uncertainty.
     dgalpotdd = c1 * sin(gal_b) * sin(gal_b) * (c2 / sqrt(z**2 + c3) - c2 * z**2 / \
                 (z**2 + c3)**(1.5) + c4) / pc / 1000.
-    dgalreldd = (v0new * cos(gal_b) / R0new)**(2) / den / c * (1. - 2. * (beta**2) / den)
-    dshklovdd = (mu_in**2) / c
-    dshklovdm = 2 * mu_in * d / c
+    dgalreldd = (v0new * cos(gal_b) / R0new)**(2) / den / c.value * (1. - 2. * (beta**2) / den)
+    dshklovdd = (mu_in**2) / c.value
+    dshklovdm = 2 * mu_in * d / c.value
     err = np.array([np.fabs(dgalpotdd) * derr, np.fabs(dgalreldd) * derr, 
           sqrt((dshklovdd * derr)**2 + (dshklovdm * mu_in_err)**2)])
 
     return np.array([galpot,galrel,shklov]), err
 
 
-def distGR(xpbd,xpbderr,pb,b,l,mu,muerr,nmc=500):
+def distGR(xpbd, xpbderr, pb, gal_b, gal_l, mu, muerr, nmc=500, tolerance=1e-12):
     """
     Determine the distance to pulsar-binary system, assuming GR is correct.
     This algorithm uses a Monte Carlo method to obtain a distribution of 
     distances. 
     """
     # header stuff.
-    c *= 1. / 1000. / pc
-    pi = np.pi
-    dist = np.zeros(nmc)
-    R0   = np.random.normal(R0,R0_err,size=(nmc))
-    v0   = np.random.normal(v0,v0_err,size=(nmc))/pc
-    xpbd = np.random.normal(xpbd,xpbderr,size=(nmc))*1e-12
-    mu   = np.random.normal(mu,muerr,size=(nmc))/1000./3600.*d2r/86400./365.25
-    pb   = pb*86400.
+    dist = []
+    R0mc = np.random.normal(R0.value, R0_err.value, size=nmc) * u.kpc
+    v0mc = np.random.normal(v0.to(u.kpc / u.s).value, v0_err.to(u.kpc / u.s).value, size=nmc) * u.kpc / u.s    
+    xpbdmc = np.random.normal(xpbd, xpbderr, size=nmc) * 1e-12 * u.s / u.s
+    mumc = (np.random.normal(mu, muerr, size=nmc) * u.mas / u.yr).to(u.rad / u.s)
+    pb = (pb * u.d).to(u.s)
+
+    # compute trig terms ahead of time for convenience.
+    cl = cos(gal_l * u.deg)
+    sl = sin(gal_l * u.deg)
+    cb = cos(gal_b * u.deg)
+    sb = sin(gal_b * u.deg)
+
+    # define Kuijken & Gilmore (1989) coefficients.
+    c1 = 1.08e-19 / u.s
+    c2 = 1.25 * u.kpc
+    c3 = 0.0324 * u.kpc * u.kpc
+    c4 = 0.58 * u.dimensionless_unscaled
+
     # now do the fun stuff, using Newton-Raphson method.
     for i in range(nmc):
-        d = 1.
+        d = 1. * u.kpc
+
         for j in range(100):
             db = d
-            z = d*sin(b)
-            beta = d/R0[i]*cos(b)-cos(l)  
-            galpot = 1.08e-19*(1.25*z/sqrt(z**2+0.0324)+0.58*z)*sin(b)
-            galrel = cos(b)*(v0[i]**2)/R0[i]*(cos(l)+beta/(sin(l)**2+beta**2))/c
-            shklov = (mu[i]**2)*d/c
+            z = d * sb
+            beta = d / R0mc[i] * cb - cl  
+            galpot = c1 * (c2 * z / sqrt(z**2 + c3) + c4 * z) * sb / u.kpc 
+            galrel = cb * v0mc[i]**2 / R0mc[i] * (cl + beta / (sl**2 + beta**2)) / c.to(u.kpc / u.s)
+            shklov = mumc[i]**2 * d / c.to(u.kpc / u.s) / u.rad**2
             # take derivatives of contributions - check these again!
-            galpotd = 1.08e-19*(1.25*sin(b)/sqrt(z**2+0.0324)-\
-                      1.25*z**2*sin(b)/(z**2+0.0324)**(1.5)+0.58)*sin(b)
-            galreld = (v0[i]**2)*cos(b)/c/R0[i]*(1./(sin(l)**2+beta**2)-\
-                      2.*beta**2*cos(b)/R0[i]/(sin(l)**2+beta**2)**2)
-            shklovd = (mu[i]**2)/c
-            f  = xpbd[i]+(galpot+galrel-shklov)*pb
-            fp = (galpotd+galreld-shklovd)*pb
-            d = d-f/fp
-            if (np.fabs(d-db) < 1e-12):
-                dist[i] = d
+            galpotd = c1 * (c2 * sb/sqrt(z**2 + c3) - \
+                      c2 * z**2 * sb / (z**2 + c3)**(1.5) + c4) / u.kpc * sb
+            galreld = cb * v0mc[i]**2 / c.to(u.kpc / u.s) / R0mc[i]**2 * (1 / (sl**2 + beta**2) - \
+                      2 * beta**2 * cb / (sl**2 + beta**2)**2)
+            shklovd = mumc[i]**2 / c.to(u.kpc / u.s) / u.rad**2
+            f  = xpbdmc[i] + (galpot + galrel - shklov) * pb
+            fp = (galpotd + galreld - shklovd) * pb
+            d = d - f / fp
+            if (np.fabs(d.value - db.value) < tolerance):
+                dist.append(d.value)
                 break
-    v0 = v0*pc
-    xpbd = xpbd*1e12
-    mu = mu*1000.*3600./d2r*86400.*365.25
-    return dist, R0, v0, mu, xpbd
+
+    return np.array(dist), R0mc.value, v0mc.value, mumc.to(u.mas / u.yr).value, (xpbdmc * 1e12).value
