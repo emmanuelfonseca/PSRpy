@@ -1,10 +1,11 @@
 #! /usr/bin/python
 
 import astropy.constants as ac
+import astropy.units as u
 import numpy as np
 
 # physical quantities.
-c            = ac.c.value              # speed of light, m/s
+c            = ac.c                    # speed of light, m/s
 G            = ac.G.value              # x Newton's constant, m^3 kg^-1 s^-2
 G_err        = ac.G.uncertainty        # ... uncertainty
 sigma_sb     = ac.sigma_sb             # Stefan-Boltzmann constant, W m^-2 K^-4
@@ -19,10 +20,13 @@ T_sun        = G * M_sun / c**3        # Shapiro r for Sun, in units of seconds.
 T_sun_err    = np.sqrt((G*M_sun_err/c**3)**2+(G_err*M_sun/c**3)**2)
 au           = ac.au.value             # astronomical unit, m
 pc           = ac.pc.value             # parsec, m
-R0           = 8.34                    # distance to Galactic center, kpc.
-R0_err       = 0.16                    # distance error, kpc
-v0           = 240.                    # circular speed of SSB, km/s
-v0_err       = 8.                      # circular speed error, km/s
+R0           = 8.34 * u.kpc            # distance to Galactic center, kpc.
+R0_err       = 0.16 * u.kpc            # distance error, kpc
+v0           = 240. * u.km / u.s      # circular speed of SSB, km/s
+v0_err       = 8. * u.km / u.s        # circular speed error, km/s
+
+# constants specific to the pulsar community.
+k_DM = (1 / 0.000241) * u.s * u.MHz * u.MHz * u.cm * u.cm * u.cm / u.pc
 
 # unit conversions.
 d2r = np.pi / 180
