@@ -155,9 +155,9 @@ def orbital_roemer_delay(dates, orbital_elements, xdot=0, pbdot=0, omdot=0, gamm
         x, pb, ecc, om, t0 = orbital_elements
 
         # first, compute Keplerian term.
-        ma = o.mean_anomaly(pb, dates, t0, pbdot=(pbdot * 1e-12)) 
-        ea = o.ecc_anomaly(ma, ecc, tolerance=tolerance) 
-        om = o.periastron_argument(om, pb, ecc, dates, t0, pbdot=pbdot, omdot=omdot, 
+        ma = mean_anomaly(pb, dates, t0, pbdot=(pbdot * 1e-12)) 
+        ea = ecc_anomaly(ma, ecc, tolerance=tolerance) 
+        om = periastron_argument(om, pb, ecc, dates, t0, pbdot=pbdot, omdot=omdot, 
                                    binary_model=binary_model, tolerance=tolerance) 
         se, ce = np.sin(ea * d2r), np.cos(ea * d2r)
         so, co = np.sin(om * d2r), np.cos(om * d2r)
