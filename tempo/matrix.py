@@ -28,14 +28,20 @@ matrix_parameter_labels = {
     ' f*  ' : 'F10',
     '   RA' : 'RAJ',
     '  Dec' : 'DECJ',
+    'lambd' : 'LAMBDA',
+    'beta ' : 'BETA',
     ' pmra' : 'PMRA',
     ' pmdc' : 'PMDEC',
+    'pmlam' : 'PMLAMBDA',
+    'pmbet' : 'PMBETA',
     '    x' : 'A1',
     '   x2' : 'A1_2',
     ' xdot' : 'XDOT',
     ' XD02' : 'XDOT2',
     '    e' : 'E',
     '   e2' : 'E_2',
+    'eps1 ' : 'EPS1',
+    'eps2 ' : 'EPS2',
     ' edot' : 'EDOT',
     '   T0' : 'T0',
     '  T02' : 'T0_2',
@@ -93,7 +99,6 @@ class Matrix:
 
         # loop to get data from binary file.
         for ii in range(num):
-    
             data = ff(fd, dtype=matrix_dtype, shape=1)
             j = int(data['j'][0])
             m = int(data['m'][0])
@@ -108,7 +113,6 @@ class Matrix:
             a = ff(fd, formats='f8', shape=m, byteorder='<')
     
             for jj in range(num):
-    
                 self.covmat[ii, jj] = a[jj][0]
 
             fd.seek(8, 1)
