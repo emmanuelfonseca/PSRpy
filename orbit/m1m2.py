@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 font = FontProperties()
-font.set_name('serif')
+font.set_name('sans-serif')
+T_sun = T_sun.value
 
 def om1dot_m1m2(omd,omderr,a1,e,pb,om,m1,npts):
     """Calculate upper/lower bounds of OMDOT curve in the m1-m2 plane."""
@@ -263,6 +264,6 @@ class M1M2():
         plt.axes().set_aspect('equal')
         plt.xlabel(r'Pulsar Mass (${\rm M}_{\odot}$)', fontproperties=font, fontsize=15)
         plt.ylabel(r'Companion Mass (${\rm M}_{\odot}$)', fontproperties=font, fontsize=15)
-        plt.savefig('m1m2.png', fmt='png')
+        plt.savefig('m1m2.png', dpi=500, fmt='png')
         plt.show()
 
