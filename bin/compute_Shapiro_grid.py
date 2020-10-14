@@ -1,4 +1,4 @@
-#/! /usr/bn/python
+#! /usr/bin/python
 
 from subprocess import call, Popen, PIPE
 from os.path import isfile
