@@ -12,8 +12,7 @@ import sys
 
 # set font parameters.
 font = FontProperties()
-font.set_name('serif')
-plt.style.use('classic')
+font.set_name('sans-serif')
 
 # parse command-line arguments.
 parser = argparse.ArgumentParser(description="Uses output from the 'SDgrid.py' program and creates interpolated probability maps and marginalized PDFs of the Shapiro-delay parameters (M2, COSI) and the pulsar mass (M1).")
@@ -80,7 +79,28 @@ def m2_massfunc(m2_in, m1_in, sini_in, mass_func):
         m2b = m2_in
     return m2_in
 
-def compute_pdf2D_m1cosi(cosi_vals, m2_vals, m1_bins, mass_function, pdf2D_m2cosi):
+# define function for computing credible intervals for a given 1D PDF..
+def compute_credible_interval(coordinate, pdf):
+    """
+    Computes the 1/2/3-sigma credible interval for a supplied probability 
+    density functio (PDF) of the given variable (or "coordinate").
+    """
+
+    cdf_at_interval = [0.0228, 0.1586, 0.5, 0.8414, 0.9772]
+    intervals = []
+
+    # first, ensure input PDF is normalized.
+    pdf_normed = pdf / np.sum(pdf)
+
+    # next, compute CDF.
+    cdf = np.array([np.sum(pdf_normed[:idx]) for idx in range(1, len(pdf_normed))])
+
+    for current_interval in cdf_at_interval:
+        intervals.append(coordinate[(np.fabs(cdf - current_interval).argmin())])
+
+    return intervals
+
+def compute_pdf2D_m1cosi(cosi_vals, m2_vals, m1_vals, m1_bins, mass_function, pdf2D_m2cosi):
     """
     Computes and interpolates a grid of M1-COSI from an input M2-COSI probability 
     density function.
@@ -118,9 +138,9 @@ def compute_pdf2D_m1cosi(cosi_vals, m2_vals, m1_bins, mass_function, pdf2D_m2cos
         n_good = len(m1_slice_good)
 
         if (n_good > 1 and n_good < n_iter):
-            m1_1D_good = m1_exp[idx_good]
+            m1_1D_good = m1_vals[idx_good]
             m1_slice_interpol = interp1d(m1_1D_good, m1_slice_good, bounds_error=False, fill_value=0)
-            min_m1_slice, max_m1_slice = min(m1_exp[idx_good]), max(m1_exp[idx_good])
+            min_m1_slice, max_m1_slice = min(m1_vals[idx_good]), max(m1_vals[idx_good])
             m1_1D_new = np.arange(min_m1_slice, max_m1_slice, m1_bin_halfstep*2)
             pdf2D_m1cosi_exp[np.digitize(m1_1D_new, m1_bins)-1, l_x] = m1_slice_interpol(m1_1D_new)
 
@@ -171,42 +191,42 @@ cosi_bestfit = np.sqrt(1 - sini_bestfit**2)
 m1_bestfit = np.sqrt((m2_bestfit * sini_bestfit)**3 / mf) - m2_bestfit
 m_tot_bestfit = m1_bestfit + m2_bestfit
 
-print "Input grid info for {}:".format(GridDict['PSR'])
-print "    * best-fit chisq: {0:.3f}".format(np.min(chi2))
-print "    * best-fit COSI:  {0:.3f}".format(cosi_bestfit)
-print "    * best-fit M2:    {0:.3f}".format(m2_bestfit)
-print "    * best-fit M1:    {0:.3f}".format(m1_bestfit)
-print "    * mass function:  {0:.10f}".format(mf)
+print("Input grid info for {}:".format(GridDict['PSR']))
+print("    * best-fit chisq: {0:.3f}".format(np.min(chi2)))
+print("    * best-fit COSI:  {0:.3f}".format(cosi_bestfit))
+print("    * best-fit M2:    {0:.3f}".format(m2_bestfit))
+print("    * best-fit M1:    {0:.3f}".format(m1_bestfit))
+print("    * mass function:  {0:.10f}".format(mf))
 if ('THETA' in GridDict):
     if ('dist' in GridDict):
-        print "    * grid is 3D (KOM as one axis)."
+        print("    * grid is 3D (KOM as one axis).")
     else: 
-        print "    * grid is 3D (KOM as one axis)."
+        print("    * grid is 3D (KOM as one axis).")
 gridtype = ''
 
 # print out H3/STIG grid info, or M2/COSI info.
 
 if ('H3' in GridDict):
 
-    print "    * H3 min, max:   ({0:.3f}, {1:.3f})".format(min(h3_1D), max(h3_1D))
+    print("    * H3 min, max:   ({0:.3f}, {1:.3f})".format(min(h3_1D), max(h3_1D)))
 
     if ('H4' in GridDict):
-        print "    * H4 min, max:   ({0:.3f}, {1:.3f})".format(min(h4_1D), max(h4_1D))
+        print("    * H4 min, max:   ({0:.3f}, {1:.3f})".format(min(h4_1D), max(h4_1D)))
         gridtype = 'h3h4'
 
     else:
-        print "    * STIG min, max: ({0:.3f}, {1:.3f})".format(min(stig_1D), max(stig_1D))
+        print("    * STIG min, max: ({0:.3f}, {1:.3f})".format(min(stig_1D), max(stig_1D)))
         gridtype = 'h3stig'
 
 else:
 
-    print "    * M2 min, max:   ({0:.3f}, {1:.3f})".format(min(m2_1D), max(m2_1D))
-    print "    * COSI min, max: ({0:.3f}, {1:.3f})".format(min(cosi_1D), max(cosi_1D))
+    print("    * M2 min, max:   ({0:.3f}, {1:.3f})".format(min(m2_1D), max(m2_1D)))
+    print("    * COSI min, max: ({0:.3f}, {1:.3f})".format(min(cosi_1D), max(cosi_1D)))
     gridtype = 'rs'
 
 if ('THETA' in GridDict):
 
-    print "    * KOM min, max:  ({0:.3f}, {1:.3f})".format(min(kom_1D), max(kom_1D))
+    print("    * KOM min, max:  ({0:.3f}, {1:.3f})".format(min(kom_1D), max(kom_1D)))
     gridtype = gridtype + '.fixXDOT'
 
 # exit if only info within input-grid files are desired.
@@ -214,12 +234,12 @@ if ('THETA' in GridDict):
 if (info_only):
     sys.exit()
 
-print "Parameters for interpolated grids:"
-print "    * COSI min, max = {0:.3f}, {1:.3f}".format(cosi_lo, cosi_hi)
-print "    * M1 min, max   = {0:.3f}, {1:.3f}".format(m1_lo, m1_hi)
-print "    * M2 min, max   = {0:.3f}, {1:.3f}".format(m2_lo, m2_hi)
+print("Parameters for interpolated grids:")
+print("    * COSI min, max = {0:.3f}, {1:.3f}".format(cosi_lo, cosi_hi))
+print("    * M1 min, max   = {0:.3f}, {1:.3f}".format(m1_lo, m1_hi))
+print("    * M2 min, max   = {0:.3f}, {1:.3f}".format(m2_lo, m2_hi))
 if ('THETA' in GridDict):
-    print "    * KOM min, max  = {0:.3f}, {1:.3f}".format(kom_lo, kom_hi)
+    print("    * KOM min, max  = {0:.3f}, {1:.3f}".format(kom_lo, kom_hi))
 
 # define common arrays and matrices that will be used for the contour 
 # plots in the end, whether or not you start with the H3/STIG or M2/COSI maps.
@@ -344,7 +364,7 @@ if ('H3' in GridDict and 'H4' in GridDict):
     cosi_exp_bins = np.linspace(cosi_bin_loedge, cosi_bin_hiedge, num=(n_iter+1))
     #cosi_row = (1 - h4_exp**2) / (1 + h4_exp**2)
 
-    print "Computing the H3/COSI grid..."
+    print("Computing the H3/COSI grid...")
    
     for n_h3 in range(n_iter):
         h3_row = h3_exp[n_h3]
@@ -397,7 +417,7 @@ if ('H3' in GridDict and 'H4' in GridDict):
     m2_bin_hiedge = m2_exp[len(m2_exp)-1] + m2_bin_halfstep
     m2_exp_bins = np.linspace(m2_bin_loedge, m2_bin_hiedge, num=(n_iter+1))
 
-    print "Computing the M2/COSI grid..."
+    print("Computing the M2/COSI grid...")
 
     for o_cosi in range(n_iter):
         cosi = cosi_exp[o_cosi]
@@ -538,7 +558,7 @@ if ('H3' in GridDict and 'STIG' in GridDict):
     cosi_exp_bins = np.linspace(cosi_bin_loedge, cosi_bin_hiedge, num=(n_iter+1))
     cosi_row = (1 - stig_exp**2) / (1 + stig_exp**2)
 
-    print "Computing the H3/COSI grid..."
+    print("Computing the H3/COSI grid...")
    
     inds = np.digitize(cosi_row, cosi_exp_bins)-1
     inds_uniq = np.unique(inds)
@@ -625,7 +645,7 @@ if ('H3' in GridDict and 'STIG' in GridDict):
     m2_bin_hiedge = m2_exp[len(m2_exp)-1] + m2_bin_halfstep
     m2_exp_bins = np.linspace(m2_bin_loedge, m2_bin_hiedge, num=(n_iter+1))
 
-    print "Computing the M2/COSI grid..."
+    print("Computing the M2/COSI grid...")
 
     for o_cosi in range(n_iter):
         cosi = cosi_exp[o_cosi]
@@ -711,7 +731,7 @@ elif ("M2" in GridDict and "COSI" in GridDict):
                 px_1D = dist_1D
                 px_exp = dist_exp
 
-            print "Computing 1D PDF for PX/DIST..."
+            print("Computing 1D PDF for PX/DIST...")
             # compute marginalized PDF for PX.
             pdf_px_orig = np.sum(pdf3D, axis=(0, 1))
             pdf_px_orig /= np.sum(pdf_px_orig)
@@ -724,24 +744,30 @@ elif ("M2" in GridDict and "COSI" in GridDict):
             pdf2D_current /= np.sum(pdf2D_current)
             pdf2D_interpol = interp2d(px_1D, m2_1D, pdf2D_current)
 
-            print "Computing 2D PDF for PX/DIST-M2..."
+            print("Computing 2D PDF for PX/DIST-M2...")
             for idx_px in range(n_iter):
                 for idx_m2 in range(n_iter):
                     pdf2D_pxm2_exp[idx_m2, idx_px] = pdf2D_interpol(px_exp[idx_px], m2_exp[idx_m2])
 
+            # normalize and transpose (the latter for being consistent 
+            # with variable nomenclature).
             pdf2D_pxm2_exp /= np.sum(pdf2D_pxm2_exp)
+            pdf2D_pxm2_exp = np.transpose(pdf2D_pxm2_exp)
 
             # now compute interolated grids for COSI-PX.
             pdf2D_current = np.sum(pdf3D, axis=0)
             pdf2D_current /= np.sum(pdf2D_current)
             pdf2D_interpol = interp2d(px_1D, cosi_1D, pdf2D_current)
 
-            print "Computing 2D PDF for PX/DIST-COSI..."
+            print("Computing 2D PDF for PX/DIST-COSI...")
             for idx_px in range(n_iter):
                 for idx_cosi in range(n_iter):
-                    pdf2D_pxcosi_exp[idx_m2, idx_px] = pdf2D_interpol(px_exp[idx_px], cosi_exp[idx_cosi])
+                    pdf2D_pxcosi_exp[idx_cosi, idx_px] = pdf2D_interpol(px_exp[idx_px], cosi_exp[idx_cosi])
 
+            # normalize and transpose (the latter for being consistent 
+            # with variable nomenclature).
             pdf2D_pxcosi_exp /= np.sum(pdf2D_pxcosi_exp)
+            pdf2D_pxcosi_exp = np.transpose(pdf2D_pxcosi_exp)
 
             # finally, compute interpolated grids for M1-PX.
             # currently, I first transform each M2-COSI grid at a given PX bin.
@@ -749,22 +775,25 @@ elif ("M2" in GridDict and "COSI" in GridDict):
             m1_bin_halfstep_orig = (m1_1D[1] - m1_1D[0]) / 2
             m1_bins_orig = np.linspace(m1_1D[0] - m1_bin_halfstep_orig, m1_1D[-1] + m1_bin_halfstep_orig, num=len(m1_1D)+1)
 
-            print "Computing 3D PDF for M1-COSI-PX/DIST..."
+            print("Computing 3D PDF for M1-COSI-PX/DIST...")
             for idx_px in range(len(px_1D)):
                 pdf2D_current = pdf3D[:, :, idx_px]
-                pdf3D_m1cosipx[:, :, idx_px] = compute_pdf2D_m1cosi(cosi_1D, m2_1D, m1_bins_orig, mf, pdf2D_current)
+                pdf3D_m1cosipx[:, :, idx_px] = compute_pdf2D_m1cosi(cosi_1D, m2_1D, m1_1D, m1_bins_orig, mf, pdf2D_current)
 
             # then I extract the marginalized M1-PX grid and interpolate it.
             pdf2D_current = np.sum(pdf3D_m1cosipx, axis=1)
             pdf2D_current /= np.sum(pdf2D_current)
-            pdf2D_interpol = interp2d(px_1D, cosi_1D, pdf2D_current)
+            pdf2D_interpol = interp2d(px_1D, m1_1D, pdf2D_current)
 
-            print "Computing 2D PDF for PX-M1..."
+            print("Computing 2D PDF for PX-M1...")
             for idx_px in range(n_iter):
                 for idx_m1 in range(n_iter):
                     pdf2D_pxm1_exp[idx_m1, idx_px] = pdf2D_interpol(px_exp[idx_px], m1_exp[idx_m1])
 
-            pdf2D_pxm1_exp /= np.sum(pdf2D_pxm2_exp)
+            # normalize and transpose (the latter for being consistent 
+            # with variable nomenclature).
+            pdf2D_pxm1_exp /= np.sum(pdf2D_pxm1_exp)
+            pdf2D_pxm1_exp = np.transpose(pdf2D_pxm1_exp)
 
         elif ('THETA' in GridDict):
 
@@ -798,9 +827,9 @@ elif ("M2" in GridDict and "COSI" in GridDict):
     else:
         pdf2D_m2cosi = np.exp(-0.5 * deltachi2_m2cosi_orig)
 
-    print "Interpolating probability map..."
+    print("Interpolating probability map...")
     pdf2D_m2cosi_interpol = interp2d(cosi_1D, m2_1D, pdf2D_m2cosi)
-    print "Computing probability map with higher resolution..."
+    print("Computing probability map with higher resolution...")
     
     # now compute high-res m2-cosi map from interpolated grid.
 
@@ -826,7 +855,7 @@ area_m2cosi = np.sum(pdf2D_m2cosi_exp)
 max_m2cosi = np.max(pdf2D_m2cosi_exp)
 pdf2D_m2cosi_exp = pdf2D_m2cosi_exp / max_m2cosi * 0.5 
 
-print "Computing high-resolution grid in m2-m1..."
+print("Computing high-resolution grid in m2-m1...")
 m1_bin_halfstep = (m1_exp[1] - m1_exp[0]) / 2
 m1_bin_loedge = m1_exp[0] - m1_bin_halfstep
 m1_bin_hiedge = m1_exp[len(m1_exp)-1] + m1_bin_halfstep
@@ -854,7 +883,7 @@ for j_m2 in range(len(m2_exp)):
 # compute M1-COSI grid as well, since the M1 probability is less smeared out
 # in this space.
 
-print "Computing high-resolution grid in m1-cosi..."
+print("Computing high-resolution grid in m1-cosi...")
 
 for x_cosi in range(n_iter):
     cosi = cosi_exp[x_cosi]
@@ -874,7 +903,7 @@ for x_cosi in range(n_iter):
 # interpolate both computed grids in case there are points that 
 # should have probability but don't due to finite bin widths.
 
-print "Interpolating both grids..."
+print("Interpolating both grids...")
 
 for o_m2 in range(n_iter):
     m2m1_slice = pdf2D_m2m1_mid[o_m2, :]
@@ -904,7 +933,7 @@ for l_x in range(n_iter):
         m1_1D_new = np.arange(min_m1_slice, max_m1_slice, m1_bin_halfstep*2)
         pdf2D_m1cosi_exp[np.digitize(m1_1D_new, m1_exp_bins)-1, l_x] = m1_slice_interpol(m1_1D_new)
 
-pdf2D_m1cosi_exp = compute_pdf2D_m1cosi(cosi_exp, m2_exp, m1_exp_bins, mf, pdf2D_m2cosi_exp)
+pdf2D_m1cosi_exp = compute_pdf2D_m1cosi(cosi_exp, m2_exp, m1_exp, m1_exp_bins, mf, pdf2D_m2cosi_exp)
 
 max_m1cosi = np.max(pdf2D_m1cosi_exp)
 pdf2D_m1cosi_exp = pdf2D_m1cosi_exp / max_m1cosi * 0.5
@@ -1053,8 +1082,9 @@ SDpdfs['M1'] = m1_exp
 SDpdfs['pdf_M2'] = pdf_M2
 SDpdfs['M2'] = m2_exp
 SDpdfs['pdf_COSI'] = pdf_cosi
-SDpdfs['pdf2D_m2cosi'] = np.transpose(pdf2D_m2cosi_exp)
-SDpdfs['pdf2D_m1cosi'] = np.transpose(pdf2D_m1cosi_exp)
+SDpdfs["pdf2D_M2M1"] = pdf2D_m2m1_exp
+SDpdfs['pdf2D_M2COSI'] = pdf2D_m2cosi_exp
+SDpdfs['pdf2D_M1COSI'] = pdf2D_m1cosi_exp
 SDpdfs['COSI'] = cosi_exp
 SDpdfs['massfunc'] = mf
 SDpdfs['bestfit_SINI'] = sini_bestfit
@@ -1080,16 +1110,28 @@ if ('THETA' in GridDict):
 elif ('DIST' in GridDict):
     SDpdfs['pdf_DIST'] = pdf_px
     SDpdfs['DIST'] = dist_exp
-    SDpdfs["pdf2D_distm1"] = pdf2D_pxm1_exp
-    SDpdfs["pdf2D_distm2"] = pdf2D_pxm2_exp
-    SDpdfs["pdf2D_distcosi"] = pdf2D_pxcosi_exp
+    SDpdfs["pdf2D_DISTM1"] = pdf2D_pxm1_exp
+    SDpdfs["pdf2D_DISTM2"] = pdf2D_pxm2_exp
+    SDpdfs["pdf2D_DISTCOSI"] = pdf2D_pxcosi_exp
 
 elif ('PX' in GridDict):
     SDpdfs['pdf_PX'] = pdf_px
     SDpdfs['PX'] = px_exp
-    SDpdfs["pdf2D_pxm1"] = pdf2D_pxm1_exp
-    SDpdfs["pdf2D_pxm2"] = pdf2D_pxm2_exp
-    SDpdfs["pdf2D_pxcosi"] = pdf2D_pxcosi_exp
+    SDpdfs["pdf2D_PXM1"] = pdf2D_pxm1_exp
+    SDpdfs["pdf2D_PXM2"] = pdf2D_pxm2_exp
+    SDpdfs["pdf2D_PXCOSI"] = pdf2D_pxcosi_exp
+
+# before writng to file, compute credible intervals for all 1D PDFs and 
+# stash and master dictionary.
+parameters = ["M1", "M2", "COSI", "PX", "DIST"]
+
+for current_parameter in parameters:
+    if (current_parameter in SDpdfs.keys()):
+        variable = SDpdfs[current_parameter]
+        pdf = SDpdfs["pdf_{0}".format(current_parameter)]
+        credible_interval = compute_credible_interval(variable, pdf)
+        SDpdfs["credible_interval_{0}".format(current_parameter)] = credible_interval
+        print "    ".join(map(str, credible_interval))
 
 # write to a .npz file.
 np.savez(
