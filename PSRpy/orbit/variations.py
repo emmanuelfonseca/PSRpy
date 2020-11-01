@@ -17,13 +17,27 @@ def gamma_GR(m1, m2, pb, e):
     A = e * (pb_in / 2 / pi)**(1./3.) * T_sun**(2./3.)
     return A * m2 * (m1 + 2 * m2) / (m1 + m2)**(4./3.)
 
-def omdot_GR(m1, m2, pb, e):
+def omdot_GR(m1, m2, pb, e, use_PK2=False):
     """
-    Calculates periastron advance, as expected from GR.
+    Calculates periastron advance, as expected from GR. The default is to compute 
+    the first-order PK term, but the second-order term can be computed if desired.
     """
 
+    # first compute first-order term.
     pb_in = pb * 86400
-    omdot = 3 * (pb_in / 2 / pi)**(-5./3.) * (T_sun * (m1 + m2))**(2./3.) / (1 - e**2)
+    mtot = m1 + m2
+    omdot = 3 * (pb_in / 2 / pi)**(-5./3.) * (T_sun * mtot)**(2./3.) / (1 - e**2)
+
+    # now compute and incorporate second-order term if desired.
+    if use_PK2:
+        x1 = (m1 / mtot)**2
+        x2 = (m2 / mtot)**2
+        x3 = m1 * m2 / mtot**2
+        f0 = (39./4. * x1 + 27./4. * x2 + 15. * x3) / (1 - e**2) - \
+             (13./4. * x1 + 1./4. * x2 + 13./3. * x3)
+        b0 = (T_sun * mtot / pb_in)**(1./3.)
+        omdot *= (1 + f0 * b0**2)
+        
     return omdot * 180 / pi * 86400 * 365.25
 
 def pbdot_GR(m1, m2, pb, e):
