@@ -1,6 +1,7 @@
 #! /usr/bin/python
 
 from subprocess import call, Popen, PIPE
+from PSRpy.const import T_sun
 from os.path import isfile
 import PSRpy.orbit.variations as orbvar
 import matplotlib.pyplot as plt
@@ -114,7 +115,6 @@ h4 = np.linspace(h4_lo, h4_hi, num=Ngrid)
 stig = np.linspace(stig_lo, stig_hi, num=Ngrid)
 px = np.linspace(px_lo, px_hi, num=Ngrid)
 xomdot = np.linspace(xomdot_lo, xomdot_hi, num=Ngrid)
-T_sun  = 4.925490947e-6
 
 # should not have to edit things from now on.
 # but, you never know...
@@ -200,7 +200,7 @@ for line in open(inpar, "r").read().splitlines():
     elif (re.search('BINARY ', line)):
         binary_model = line.split()[1]
 
-massfunc = A1**3 * (2 * np.pi / Pb / 86400.)**2 / T_sun
+massfunc = A1**3 * (2 * np.pi / Pb / 86400.)**2 / T_sun.value
 
 if (pmra !=0 and pmdec != 0):
     pm = np.sqrt(pmra**2 + pmdec**2)
@@ -522,7 +522,7 @@ for x_elem in x:
                 #        fout.write(line+"\n")
                 elif (re.search('GAMMA',line)):
                     if fixGAMMA:
-                        gamma_new = orbvar.gamma_GR(m1_elem, m2_elem, Pb, E)
+                        gamma_new = orbvar.gamma_GR(m1_elem, m2_elem, Pb, E).value
                         fout.write("{0}               {1:.12f}  0\n".format('GAMMA', gamma_new))
                     else:
                         fout.write(line+"\n")
@@ -892,7 +892,7 @@ else:
     else:
         outf_contour = 'rs.'+obj+'.png'
 
-    plt.pcolormesh(x, y, pdf2D, vmin=0, vmax=np.max(pdf2D), cmap="Blues")
+    plt.pcolormesh(x, y, pdf2D, vmin=0, vmax=np.max(pdf2D), cmap="Blues", shading="auto")
     plt.colorbar()
 
     if gridH3STIG:
@@ -963,6 +963,8 @@ elif fixPX:
 else:
 
     GridDict['chisq'] = chisq
+
+print(np.min(chisq), np.max(chisq))
 
 GridDict['chisq_bestfit'] = chisq_bestfit
 GridDict['M2_bestfit'] = m2_bestfit
