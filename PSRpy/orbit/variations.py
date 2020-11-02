@@ -26,7 +26,7 @@ def omdot_GR(m1, m2, pb, e, use_PK2=False):
     # first compute first-order term.
     pb_in = pb * 86400
     mtot = m1 + m2
-    omdot = 3 * (pb_in / 2 / pi)**(-5./3.) * (T_sun * mtot)**(2./3.) / (1 - e**2)
+    omdot = 3 * (pb_in / 2 / pi)**(-5./3.) * (T_sun.value * mtot)**(2./3.) / (1 - e**2)
 
     # now compute and incorporate second-order term if desired.
     if use_PK2:
@@ -35,8 +35,8 @@ def omdot_GR(m1, m2, pb, e, use_PK2=False):
         x3 = m1 * m2 / mtot**2
         f0 = (39./4. * x1 + 27./4. * x2 + 15. * x3) / (1 - e**2) - \
              (13./4. * x1 + 1./4. * x2 + 13./3. * x3)
-        b0 = (T_sun * mtot / pb_in)**(1./3.)
-        omdot *= (1 + f0 * b0**2)
+        b0 = (T_sun.value * mtot / pb_in)**(1./3.)
+        omdot +=  omdot * f0 * b0**2
         
     return omdot * 180 / pi * 86400 * 365.25
 
