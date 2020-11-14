@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-from PSRpy.parfile import ReadPar, PrintPar
+from PSRpy.parfile import Parfile, PrintPar
 from astropy.coordinates import Angle
 from subprocess import Popen, PIPE
 from copy import deepcopy
@@ -19,7 +19,7 @@ class TempoMCMC():
         self.parfile = parfile
         self.timfile = timfile
 
-        self.par_object = ReadPar(self.parfile)
+        self.par_object = Parfile(self.parfile)
 
         current_parameters = self.par_object.fit_parameters
         parameters_for_mcmc = []
@@ -194,7 +194,7 @@ class TempoMCMC():
 
         for iternum in range(n_iterations):
 
-            current_par = ReadPar('mcmc_current.par')
+            current_par = Parfile('mcmc_current.par')
             setattr(self, 'par_object', deepcopy(current_par))
             self.step(factor=efac)
             self.par_object.write(outfile='mcmc_proposal.par')
@@ -241,7 +241,7 @@ class TempoMCMC():
         factor : int
             Multiplicative value applied to every uncertainty.
 
-        TODO: adapt this module for ReadPar step/write functionality.
+        TODO: adapt this module for Parfile step/write functionality.
         """
 
         n_dim = len(self.parameters) / 2.4**2
