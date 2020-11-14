@@ -16,4 +16,4 @@ string_list = ["PSR", "PSRJ", "RAJ", "DECJ", "SOLARN0", "EPHEM", "ECL", "CLK",
 
 int_list    = ["NTOA", "NITS", "NDDM", "EPHVER", "MODE"]
 
-error_list = ["T2EFAC", "T2EQUAD", "ECORR", "JUMP"]
+error_list = ["T2EFAC", "T2EQUAD", "ECORR", "JUMP", "DMEFAC", "DMJUMP"]

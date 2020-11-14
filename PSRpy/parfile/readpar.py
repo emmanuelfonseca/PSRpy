@@ -9,8 +9,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-pi = np.pi
-
 def represents_an_int(input_string):
     """
     Checks if string can be represented as a Python integer and returns a boolean.
@@ -30,7 +28,7 @@ def represents_an_int(input_string):
 
     return is_an_integer
 
-class ReadPar():
+class Parfile(object):
     """
     Reads in parfile parameter values, uncertainties and flags as object attributes.
 
@@ -54,6 +52,14 @@ class ReadPar():
 
     def __init__(self, infile, efac=1):
 
+        # first, read input data.
+        self._read_parfile(infile, efac=efac)
+        
+        # next, derive parameters based on parfile data.
+        # TODO: define internal-use function for this purpose.
+
+
+    def _read_parfile(self, infile, efac=1):
         # preserve order of parameters in parfile.
         self.fit_parameters = []
         parorder = []
@@ -138,7 +144,7 @@ class ReadPar():
                             setattr(self, parname + 'err', efac * np.float(lsplit[5]))
                 
                     # treat TEMPO2 parameter names somewhat differently.
-                    elif (parname in ["T2EFAC", "T2EQUAD", "ECORR"]):
+                    elif (parname is not "JUMP"):
                         setattr(self, "{0}_{1}".format(parname, lsplit[2]) , np.float(lsplit[3]))
 
                     else:
