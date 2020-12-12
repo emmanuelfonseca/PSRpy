@@ -3,9 +3,9 @@
 from re import match
 from PSRpy.const import c, G, M_sun, T_sun
 from astropy.coordinates import Angle
-from .config_parfile import string_list, error_list, int_list
-import astropy.units as u
+from .config_parfile import *
 import matplotlib.pyplot as plt
+import astropy.units as u
 import numpy as np
 import sys
 
@@ -35,7 +35,7 @@ class Parfile(object):
     Inputs
     ------
 
-    infile : str
+    input_parfile : str
         pulsar-timing parameter file
 
     efac : float
@@ -50,21 +50,21 @@ class Parfile(object):
     """
 
 
-    def __init__(self, infile, efac=1):
+    def __init__(self, input_parfile, efac=1):
 
         # first, read input data.
-        self._read_parfile(infile, efac=efac)
+        self._read_parfile(input_parfile, efac=efac)
         
         # next, derive parameters based on parfile data.
         # TODO: define internal-use function for this purpose.
 
 
-    def _read_parfile(self, infile, efac=1):
+    def _read_parfile(self, input_parfile, efac=1):
         # preserve order of parameters in parfile.
         self.fit_parameters = []
         parorder = []
 
-        for line in open(infile, "r").readlines():
+        for line in open(input_parfile, "r").readlines():
             lsplit = line.split()
 
             if (len(lsplit) != 0):
@@ -76,7 +76,7 @@ class Parfile(object):
                 parname, parvalue = lsplit[0], lsplit[1]
 
                 # set the following attributes as strings.
-                if (parname in string_list):
+                if (parname in parameter_list_string):
                     setattr(self, parname, parvalue)
                     # the following is for 'RAJ', 'DECJ' that have flags/errors.
                     if (len(lsplit) > 2):
@@ -97,12 +97,12 @@ class Parfile(object):
                         setattr(self, parname + 'err', efac * np.float(lsplit[3]))
 
                 # set these as integers.
-                elif (parname in int_list):
+                elif (parname in parameter_list_int):
                     setattr(self, parname, np.int(parvalue))
 
                 # otherwise, if not a JUMP, assume it's a fit parameter 
                 # and store value/errors as floats.
-                elif (parname not in error_list):
+                elif (parname not in parameter_list_error):
                     # switch 'D' with 'e' for exponents.
                     if (parvalue.find('D') != -1):
                         parvalue = parvalue.replace('D','e')
@@ -133,7 +133,7 @@ class Parfile(object):
                         setattr(self,parname+'err',np.float(efac*lsplit[3]))
 
                 # store JUMP/EFAC/EQUAD as float, but values have different indeces.
-                elif (parname in error_list):
+                elif (parname in parameter_list_error):
                     if (parname == 'JUMP'):
                         parname += '_' + lsplit[2]
                         self.fit_parameters.append(parname)
@@ -170,7 +170,7 @@ class Parfile(object):
             if (hasattr(self, parameter + 'flag')):
                 setattr(self, parameter + 'flag', 0)
 
-    def rotate(self, new_epoch):
+    def rotate(self, new_epoch, fix_T0=False, rotate_binary_to_new_epoch=False):
         """
         Rotates spin/binary parameters to new PEPOCH, if time-derivatives are present. Default is 
         to rotate solution to the midpoint of the timespan.
@@ -180,6 +180,16 @@ class Parfile(object):
 
         new_epoch : float
             New reference epoch for timing solution.
+
+        fix_T0 : bool
+            If set to True, leave binary T0 fixed to original value.
+
+        rotate_binary_to_new_epoch : bool
+            If set to True, then rotate orbital elements to values exactly at the new PEPOCH.
+            This differs from the default operation, where elements are rotated to the rotated 
+            T0/TASC value depending on the orbital period. This option is mainly useful for 
+            determining the starting elements for numerical integrators. 
+
         """
 
         from math import factorial
@@ -197,19 +207,20 @@ class Parfile(object):
             setattr(self, 'LAMBDA', new_lambda)
 
         # rotate spin parameters.
-        spinfreq_derivatives = ['F0', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8',
-                                'F9', 'F10', 'F11', 'F12', 'F13', 'F14', 'F15', 'F16',
-                                'F17', 'F18', 'F19', 'F20']
-        for spin_num in range(len(spinfreq_derivatives)):
-            if hasattr(self, 'F' + str(spin_num)):
-                spin_par = getattr(self, 'F' + str(spin_num))
+        current_spin_location = 0
+        for current_spin_1 in parameter_list_spin:
+            if hasattr(self, current_spin_1):
+                spin_par_1 = getattr(self, current_spin_1)
                 idx = 1
 
-                for spin_num2 in range(spin_num + 1, len(spinfreq_derivatives)):
+                for current_spin_2 in parameter_list_spin[current_spin_location+1:]:
                     fac = factorial(idx)
-                    if hasattr(self, 'F' + str(spin_num2)):
-                        spin_par += (getattr(self, 'F' + str(spin_num2))) * diff_epoch**idx / fac
+
+                    if hasattr(self, current_spin_2):
+                        spin_par_2 = getattr(self, current_spin_2)
+                        spin_par_1 += spin_par_2 * diff_epoch**idx / fac
                         idx += 1
+
                     else:
                         break
 
@@ -217,50 +228,93 @@ class Parfile(object):
             else:
                 break
 
+            current_spin_location += 1
+
         # if in binary system, rotate relevant binary parameters.
         if hasattr(self, 'BINARY'):
-            circ_models = ['ELL1', 'ELL1H']
-            ecc_models = ['DD', 'DDGR', 'BT', 'BTX']
             binary_model = getattr(self, 'BINARY')
             new_Tasc = 0.
+            old_T0 = self.T0
             new_T0 = 0.
-            diff_binary = 0.
 
-            if (binary_model in circ_models):
+            if (binary_model in model_list_binary_circular):
                 pass
 
-            elif (binary_model in ecc_models):
+            elif (binary_model in model_list_binary_eccentric):
                 pb = 0.
 
                 # if BTX, orbital frequencies are used.
                 if (binary_model == 'BTX'):
                     pb = 1 / self.FB0 / 86400
+
                 else:
                     pb = self.PB
 
-                old_T0 = self.T0
-                n_orbits = np.int((new_epoch - old_T0) / pb)
-                new_T0 = old_T0 + pb * n_orbits
-                diff_binary = new_T0 - old_T0
-                setattr(self, 'T0', new_T0)
+                # change T0 unless specified otherwise.
+                if (not fix_T0):
+                    n_orbits = np.int((new_epoch - old_T0) / pb)
+                    new_T0 = old_T0 + pb * n_orbits
+                    setattr(self, 'T0', new_T0)
 
-                # if OMDOT is set, rotate OM.
-                if hasattr(self, 'OMDOT'):
-                    omdot = self.OMDOT  / 365.25 
-                    new_OM = self.OM + omdot * diff_binary 
-                    setattr(self, 'OM', new_OM)
+                # if desired, set binary time difference to be between 
+                # T0 and the new epoch.
+                if (rotate_binary_to_new_epoch):
+                    new_T0 = new_epoch
 
-            # if XDOT is set, rotate A1.
-            if hasattr(self, 'XDOT'):
-                xdot = self.XDOT * 1e-12
-                new_A1 = self.A1 + xdot * diff_binary * 86400
-                setattr(self, 'A1', new_A1)
+            diff_binary = (new_T0 - old_T0) * 86400
 
-            # if PBDOT set, rotate PB.
-            if hasattr(self, 'PBDOT'):
-                pbdot = self.PBDOT * 1e-12
-                new_PB = self.PB + pbdot * diff_binary 
-                setattr(self, 'PB', new_PB)
+            # if derivatives in OM are set, then rotate OM.
+            new_OM = self.OM
+            idx = 1
+
+            for current_derivative_om in parameter_list_orbit_derivatives["OM"]:
+                if hasattr(self, current_derivative_om):
+                    current_value = getattr(self, current_derivative_om)
+                    fac = factorial(idx)
+
+                    if (current_derivative_om == "OMDOT"):
+                        current_value /= (365.25 * 86400) 
+
+                    else:
+                        current_value *= (180 / np.pi)
+
+                    new_OM += current_value * diff_binary**idx / fac
+
+            setattr(self, "OM", new_OM)
+
+            # if derivatives in A1 are set, then rotate A1.
+            new_A1 = self.A1
+            idx = 1
+
+            for current_derivative_a1 in parameter_list_orbit_derivatives["A1"]:
+                if hasattr(self, current_derivative_a1):
+                    current_value = getattr(self, current_derivative_a1)
+                    fac = factorial(idx)
+
+                    if (current_derivative_om == "XDOT"):
+                        current_value *= 1e-12
+
+                    new_A1 += current_value * diff_binary**idx / fac
+
+            setattr(self, "A1", new_A1)
+
+            # if derivatves in FB0 are set, then rotate FB0.
+            new_FB0 = self.FB0
+            idx = 1
+
+            for current_derivative_fb in parameter_list_orbit_derivatives["FB"]:
+                if hasattr(self, current_derivative_fb):
+                    current_value = getattr(self, current_derivative_fb)
+                    fac = factorial(idx)
+                    new_FB0 += current_value * diff_binary**idx / fac
+
+            setattr(self, "FB0", new_FB0)
+
+            # if PBDOT is set, then rotate PB.
+            if hasattr(self, "PBDOT"):
+                pbdot = getattr(self, "PBDOT") * 1e-12
+                new_PB = getattr(self, "PB") + (pbdot * diff_binary) / 86400
+                setattr(self, "PB", new_PB)
             
     def step(self, uniform_factor=1):
         """
