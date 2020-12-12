@@ -1,7 +1,9 @@
-#/! /usr/bn/python
+#! /usr/bin/python
 
 from subprocess import call, Popen, PIPE
+from PSRpy.const import T_sun
 from os.path import isfile
+import PSRpy.orbit.variations as orbvar
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
@@ -113,36 +115,9 @@ h4 = np.linspace(h4_lo, h4_hi, num=Ngrid)
 stig = np.linspace(stig_lo, stig_hi, num=Ngrid)
 px = np.linspace(px_lo, px_hi, num=Ngrid)
 xomdot = np.linspace(xomdot_lo, xomdot_hi, num=Ngrid)
-T_sun  = 4.925490947e-6
 
 # should not have to edit things from now on.
 # but, you never know...
-
-def OMDOT_GR(m1_in, m2_in, period, ecc, use_PK2=False):
-    twoPI = 2 * np.pi
-    mtot_in = m1_in + m2_in
-    period_in = period * 86400 / twoPI
-    pred = 3 * T_sun**(2./3.) * period_in**(-5./3.) * mtot_in**(2./3.) / (1 - ecc**2)
-    pred *= 360 / twoPI * 86400 * 365.25 # convert from rad/s to deg/yr.
-
-    # the following, if desired, adds the amount due to second-order PK corrections.
-    if use_PK2:
-        x1 = (m1_in / mtot_in)**2
-        x2 = (m2_in / mtot_in)**2
-        x3 = m1_in * m2_in / mtot_in**2
-        f0 = (39./4. * x1 + 27./4. * x2 + 15. * x3) / (1 - ecc**2) - \
-             (13./4. * x1 + 1./4. * x2 + 13./3. * x3)
-        b0 = (T_sun * mtot_in / period_in)**(1./3.)
-        
-        pred += (pred * f0 * b0**2)
-
-    return pred
-
-def GAMMA_GR(m1_in, m2_in, period, ecc):
-    period_in = period * 86400
-    A = ecc * (period_in / 2 / np.pi)**(1./3.) * T_sun**(2./3.) 
-    pred = A * m2_in * (m1_in + 2 * m2_in) / (m1_in + m2_in)**(4./3.)
-    return pred
 
 # set grid/tempo parameters.
 chisq = np.zeros((Ngrid, Ngrid))
@@ -225,7 +200,7 @@ for line in open(inpar, "r").read().splitlines():
     elif (re.search('BINARY ', line)):
         binary_model = line.split()[1]
 
-massfunc = A1**3 * (2 * np.pi / Pb / 86400.)**2 / T_sun
+massfunc = A1**3 * (2 * np.pi / Pb / 86400.)**2 / T_sun.value
 
 if (pmra !=0 and pmdec != 0):
     pm = np.sqrt(pmra**2 + pmdec**2)
@@ -531,9 +506,9 @@ for x_elem in x:
                         fout.write("{0}                 {1:.8f}  0\n".format(elem[0], m2_elem))
                 elif (re.search('OMDOT ',line)):
                     if ((fixOMDOT and fixXOMDOT) or (fixOMDOT and fixXDOT)):
-                        omdot_new = OMDOT_GR(m1_elem, m2_elem, Pb, E, use_PK2=use_PK2)
+                        omdot_new = orbvar.omdot_GR(m1_elem, m2_elem, Pb, E, use_PK2=use_PK2)
                     elif fixOMDOT:
-                        omdot_new = OMDOT_GR(m1_elem, m2_elem, Pb, E, use_PK2=use_PK2)
+                        omdot_new = orbvar.omdot_GR(m1_elem, m2_elem, Pb, E, use_PK2=use_PK2)
                         fout.write("{0}               {1:.12f}  0\n".format('OMDOT', omdot_new))
                     else:
                         fout.write(line+"\n")
@@ -547,7 +522,7 @@ for x_elem in x:
                 #        fout.write(line+"\n")
                 elif (re.search('GAMMA',line)):
                     if fixGAMMA:
-                        gamma_new = GAMMA_GR(m1_elem, m2_elem, Pb, E)
+                        gamma_new = orbvar.gamma_GR(m1_elem, m2_elem, Pb, E).value
                         fout.write("{0}               {1:.12f}  0\n".format('GAMMA', gamma_new))
                     else:
                         fout.write(line+"\n")
@@ -917,7 +892,7 @@ else:
     else:
         outf_contour = 'rs.'+obj+'.png'
 
-    plt.pcolormesh(x, y, pdf2D, vmin=0, vmax=np.max(pdf2D), cmap="Blues")
+    plt.pcolormesh(x, y, pdf2D, vmin=0, vmax=np.max(pdf2D), cmap="Blues", shading="auto")
     plt.colorbar()
 
     if gridH3STIG:
@@ -988,6 +963,8 @@ elif fixPX:
 else:
 
     GridDict['chisq'] = chisq
+
+print(np.min(chisq), np.max(chisq))
 
 GridDict['chisq_bestfit'] = chisq_bestfit
 GridDict['M2_bestfit'] = m2_bestfit

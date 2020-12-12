@@ -137,7 +137,7 @@ def simulate_TOAs(
     for kk in range(3):
     
         # load in output data from initial run.
-        toa_data = read_resid2("resid2.tmp")
+        toa_data, _ = read_resid2("resid2.tmp")
         corrections = toa_data["residuals"] / 86400.
         #uncertainties = toa_data["toa_uncertainties"]
 

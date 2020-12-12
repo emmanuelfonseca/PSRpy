@@ -1,6 +1,5 @@
 #! /usr/bin/python
 
-from .config_parfile import parameter_list, string_list, int_list, error_list, spin_freq_derivatives
 import numpy as np
 import sys
 
@@ -30,7 +29,7 @@ class PrintPar():
             value = str(getattr(inobj,parameter))
 
             # first check if parameter has fixed/string value.
-            if (parameter in string_list):
+            if (parameter in parameter_string_list):
                 
                 if (parameter == 'RAJ' and hasattr(inobj, 'RAJerr')):
                     flag = getattr(inobj, 'RAJflag') 
@@ -44,11 +43,11 @@ class PrintPar():
                     outfile.write("{0:15}       {1:20}\n".format(parameter, value))
 
             # next, check if parameter has fixed/integer value.
-            elif (parameter in int_list):
+            elif (parameter in parameter_string_int):
                 outfile.write("{0:15}       {1:2d}\n".format(parameter, int(value)))
 
             # next, isolate noise-model parameters.
-            elif (parameter in error_list):
+            elif (parameter in parameter_string_error):
                 par, und, front = parameter.partition('_')
                 fe = '-f'
 
@@ -67,7 +66,7 @@ class PrintPar():
                     outfile.write("{0:10} {1:5} {2:20} {3:20}\n".format(par,fe,front,value))                  
 
             # finally, loop over fit parameters.
-            elif (parameter in parameter_list or "DMX" in parameter or "JUMP_" in parameter):
+            elif (parameter in parameter_list_full or "DMX" in parameter or "JUMP_" in parameter):
 
                 if (value.find('E') != -1):
                     value = value.replace('E','D')
@@ -82,7 +81,7 @@ class PrintPar():
                         
                         error = '0.0'
 
-                    elif (parameter in spin_freq_derivatives):
+                    elif (parameter in parameter_list_spin):
                         error = str(error_value)
 
                     else:

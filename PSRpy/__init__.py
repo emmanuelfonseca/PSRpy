@@ -8,6 +8,7 @@ from . import orbit
 from . import parfile
 from . import profile
 from . import simulate
+from . import stats
 from . import tempo
 from . import timfile
 from . import utils

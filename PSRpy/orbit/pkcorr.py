@@ -35,8 +35,8 @@ def doppler(distance, distance_err, gal_b, gal_l, mu, mu_err):
     """
 
     # header stuff.
-    R0new, R0_errnew = np.array([R0, R0_err]) *pc * 1000.   # convert to m
-    v0new, v0_errnew = np.array([v0, v0_err]) * 1000.      # convert to m/s
+    R0new, R0_errnew = np.array([R0.value, R0_err.value]) * pc * 1000.   # convert to m
+    v0new, v0_errnew = np.array([v0.value, v0_err.value]) * 1000.      # convert to m/s
     d = distance * pc * 1000.
     derr = distance_err * pc * 1000.
     z = distance * sin(gal_b)
