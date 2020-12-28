@@ -8,7 +8,7 @@ n_derivatives_spin = 20
 n_derivatives_DM = 10
 n_derivatives_FD = 6
 n_orbits_BTX = 3
-n_bins_DMX = 500
+n_bins_DMX = 1000
 
 # list of astrometric parameters.
 parameter_list_astrometry = ["RAJ", "DECJ", "PMRA", "PMDEC"] +\
