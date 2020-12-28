@@ -54,10 +54,106 @@ class Parfile(object):
 
         # first, read input data.
         self._read_parfile(input_parfile, efac=efac)
-        
+
+        # next, organize DMX data if present. 
+        self.has_dmx = False 
+        self._get_dmx_data()     
         # next, derive parameters based on parfile data.
         # TODO: define internal-use function for this purpose.
 
+
+    def _get_dmx_data(self):
+        """
+        A private function that organizes DMX data into lists if present in input parfile.
+
+        Returns
+        -------
+        has_dmx : bool
+            a boolean that is set to True if the input parfile has DMX data.
+
+        n_bins_dmx : int
+            the number of DMX values in the parfile.
+        
+        dmx_val : list of floats
+            a list of DMX values. 
+
+        dmx_err : list of floats
+            a list of the uncertainties for each DMX value.
+
+        dmx_deriv_val : list of floats
+            a list of DMX first derivatives.
+
+        dmx_deriv_err : list of floats
+            a list of uncertainties for each DMX first derivative.
+
+        dmx_range_freq : list of two-element lists (floats)
+            a list of bounds in frequency for each DMX bin.
+
+        dmx_range_tim : list of two-element lists (floats)
+            a list of bounds in time for each DMX bin
+
+        dmx_mean_epoch : list of floats
+            a list of mean epochs for each DMX bin.
+        """
+
+        try:
+
+            assert(hasattr(self, "DMX"))
+
+            # if assertion passes, proceed with reading DMX data.
+            self.has_dmx = True
+            self.n_bins_dmx = 0
+            self.dmx_val = []
+            self.dmx_err = []
+            self.dmx_deriv_val = []
+            self.dmx_deriv_err = []
+            self.dmx_range_freq = []
+            self.dmx_range_time = []
+            self.dmx_mean_epoch = []
+
+            # now loop over all possible labels and extract existing data.
+            for ii in range(1000):
+                current_label = str(ii).zfill(4)
+
+                if (hasattr(self, "DMX_{0}".format(current_label))):
+                    self.dmx_val += [getattr(self, "DMX_{0}".format(current_label))]
+
+                if (hasattr(self, "DMX_{0}err".format(current_label))):
+                    self.dmx_err += [getattr(self, "DMX_{0}err".format(current_label))]
+
+                if (hasattr(self, "DMX1_{0}".format(current_label))):
+                    self.dmx_deriv_val += [getattr(self, "DMX1_{0}".format(current_label))]
+
+                if (hasattr(self, "DMX1_{0}err".format(current_label))):
+                    self.dmx_deriv_val += [getattr(self, "DMX1_{0}err".format(current_label))]
+
+                if (hasattr(self, "DMXEP_{0}".format(current_label))):
+                    self.dmx_mean_epoch += [getattr(self, "DMXEP_{0}".format(current_label))]
+
+                # store the time/freq range data as nested lists.
+                if (hasattr(self, "DMXF1_{0}".format(current_label)) and
+                    hasattr(self, "DMXF2_{0}".format(current_label))):
+                    self.dmx_range_freq.append(
+                        [
+                            getattr(self, "DMXF1_{0}".format(current_label)),
+                            getattr(self, "DMXF2_{0}".format(current_label))
+                        ]
+                    )
+
+                if (hasattr(self, "DMXR1_{0}".format(current_label)) and
+                    hasattr(self, "DMXR2_{0}".format(current_label))):
+                    self.dmx_range_time.append(
+                        [
+                            getattr(self, "DMXR1_{0}".format(current_label)),
+                            getattr(self, "DMXR2_{0}".format(current_label))
+                        ]
+                    )
+
+            # now set reamining variables.
+            self.n_bins_dmx = len(self.dmx_val)
+
+        except:
+            print("WARNING: no DMX data round in parfile!")
 
     def _read_parfile(self, input_parfile, efac=1):
         # preserve order of parameters in parfile.
@@ -78,6 +174,7 @@ class Parfile(object):
                 # set the following attributes as strings.
                 if (parname in parameter_list_string):
                     setattr(self, parname, parvalue)
+
                     # the following is for 'RAJ', 'DECJ' that have flags/errors.
                     if (len(lsplit) > 2):
                         # check if third element is an integer;
@@ -87,6 +184,7 @@ class Parfile(object):
 
                         if (is_flag):
                             setattr(self, parname + 'flag', np.int(lsplit[2]))
+
                             if (np.int(lsplit[2]) == 1):
                                 self.fit_parameters.append(parname)
 
@@ -103,14 +201,18 @@ class Parfile(object):
                 # otherwise, if not a JUMP, assume it's a fit parameter 
                 # and store value/errors as floats.
                 elif (parname not in parameter_list_error):
+
                     # switch 'D' with 'e' for exponents.
                     if (parvalue.find('D') != -1):
+
                         parvalue = parvalue.replace('D','e')
                     # DDK model in TEMPO can have SINI = KIN.
                     if (parvalue == 'KIN'):
                         setattr(self, parname, parvalue)
+
                     else:
                         setattr(self, parname, np.longdouble(parvalue))
+
                     # set flag and error attributes if present in parfile.
                     if (len(lsplit) > 2):
                         # check if third element is an integer;
@@ -335,20 +437,40 @@ class Parfile(object):
                         err = getattr(self, 'RAJerr') / 3600
                         ra_new = ra.deg + err * np.random.uniform(-1., 1.) 
                         ra_new = Angle(ra_new, unit=u.deg)
-                        setattr(self, parameter, str(ra_new.to_string(unit=u.hour, sep=':', precision=10)))
+                        setattr(
+                            self, 
+                            parameter, 
+                            str(
+                                ra_new.to_string(
+                                    unit=u.hour, 
+                                    sep=':', 
+                                    precision=10
+                                )
+                            )
+                        )
     
                     elif (parameter == 'DECJ'):
                         dec = Angle(getattr(self, 'DECJ'), unit=u.deg)
                         err = getattr(self, 'DECJerr') / 3600
                         dec_new = dec.deg + err * np.random.uniform(-1., 1.) 
                         dec_new = Angle(dec_new, unit=u.deg)
-                        setattr(self, parameter, str(dec_new.to_string(unit=u.deg, sep=':', precision=10)))
+                        setattr(
+                            self, 
+                            parameter, 
+                            str(
+                                dec_new.to_string(
+                                    unit=u.deg, 
+                                    sep=':', 
+                                    precision=10
+                                )
+                            )
+                        )
 
                     elif (parameter == 'SINI'):
                         cosi = np.sqrt(1 - getattr(self, 'SINI')**2)
                         err = getattr(self, 'DECJerr') / 3600
                         cosi +=  err * np.random.uniform(-1., 1.)
-                        setattr(self, parameter, np.sqrt(1.-cosi**2))
+                        setattr(self, parameter, np.sqrt(1 - cosi**2))
 
                     else:
                         setattr(self, parameter, value + err * np.random.uniform(-1., 1.))
