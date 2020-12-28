@@ -1,32 +1,14 @@
 #! /usr/bin/python
 
-from re import match
+from PSRpy.utils.math import represents_an_int
 from PSRpy.const import c, G, M_sun, T_sun
+from . import config_parfile as config
 from astropy.coordinates import Angle
-from .config_parfile import *
+from re import match
 import matplotlib.pyplot as plt
 import astropy.units as u
 import numpy as np
 import sys
-
-def represents_an_int(input_string):
-    """
-    Checks if string can be represented as a Python integer and returns a boolean.
-    This function is used to evaluate if 
-
-    taken from: https://stackoverflow.com/questions/1265665/how-can-i-check-if-a-string-represents-an-int-without-using-try-except
-    """
-
-    is_an_integer = False
-
-    try:
-        value = int(input_string)
-        is_an_interger = True
-
-    except ValueError:
-        pass
-
-    return is_an_integer
 
 class Parfile(object):
     """
@@ -58,6 +40,7 @@ class Parfile(object):
         # next, organize DMX data if present. 
         self.has_dmx = False 
         self._get_dmx_data()     
+
         # next, derive parameters based on parfile data.
         # TODO: define internal-use function for this purpose.
 
@@ -112,7 +95,7 @@ class Parfile(object):
             self.dmx_mean_epoch = []
 
             # now loop over all possible labels and extract existing data.
-            for ii in range(1000):
+            for ii in range(config.n_bins_DMX):
                 current_label = str(ii).zfill(4)
 
                 if (hasattr(self, "DMX_{0}".format(current_label))):
@@ -172,7 +155,7 @@ class Parfile(object):
                 parname, parvalue = lsplit[0], lsplit[1]
 
                 # set the following attributes as strings.
-                if (parname in parameter_list_string):
+                if (parname in config.parameter_list_string):
                     setattr(self, parname, parvalue)
 
                     # the following is for 'RAJ', 'DECJ' that have flags/errors.
@@ -195,12 +178,12 @@ class Parfile(object):
                         setattr(self, parname + 'err', efac * np.float(lsplit[3]))
 
                 # set these as integers.
-                elif (parname in parameter_list_int):
+                elif (parname in config.parameter_list_int):
                     setattr(self, parname, np.int(parvalue))
 
                 # otherwise, if not a JUMP, assume it's a fit parameter 
                 # and store value/errors as floats.
-                elif (parname not in parameter_list_error):
+                elif (parname not in config.parameter_list_error):
 
                     # switch 'D' with 'e' for exponents.
                     if (parvalue.find('D') != -1):
@@ -235,7 +218,7 @@ class Parfile(object):
                         setattr(self,parname+'err',np.float(efac*lsplit[3]))
 
                 # store JUMP/EFAC/EQUAD as float, but values have different indeces.
-                elif (parname in parameter_list_error):
+                elif (parname in config.parameter_list_error):
                     if (parname == 'JUMP'):
                         parname += '_' + lsplit[2]
                         self.fit_parameters.append(parname)
@@ -310,12 +293,12 @@ class Parfile(object):
 
         # rotate spin parameters.
         current_spin_location = 0
-        for current_spin_1 in parameter_list_spin:
+        for current_spin_1 in config.parameter_list_spin:
             if hasattr(self, current_spin_1):
                 spin_par_1 = getattr(self, current_spin_1)
                 idx = 1
 
-                for current_spin_2 in parameter_list_spin[current_spin_location+1:]:
+                for current_spin_2 in config.parameter_list_spin[current_spin_location+1:]:
                     fac = factorial(idx)
 
                     if hasattr(self, current_spin_2):
@@ -369,7 +352,7 @@ class Parfile(object):
             new_OM = self.OM
             idx = 1
 
-            for current_derivative_om in parameter_list_orbit_derivatives["OM"]:
+            for current_derivative_om in config.parameter_list_orbit_derivatives["OM"]:
                 if hasattr(self, current_derivative_om):
                     current_value = getattr(self, current_derivative_om)
                     fac = factorial(idx)
@@ -388,7 +371,7 @@ class Parfile(object):
             new_A1 = self.A1
             idx = 1
 
-            for current_derivative_a1 in parameter_list_orbit_derivatives["A1"]:
+            for current_derivative_a1 in config.parameter_list_orbit_derivatives["A1"]:
                 if hasattr(self, current_derivative_a1):
                     current_value = getattr(self, current_derivative_a1)
                     fac = factorial(idx)
@@ -404,7 +387,7 @@ class Parfile(object):
             new_FB0 = self.FB0
             idx = 1
 
-            for current_derivative_fb in parameter_list_orbit_derivatives["FB"]:
+            for current_derivative_fb in config.parameter_list_orbit_derivatives["FB"]:
                 if hasattr(self, current_derivative_fb):
                     current_value = getattr(self, current_derivative_fb)
                     fac = factorial(idx)
