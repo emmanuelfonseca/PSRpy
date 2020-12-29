@@ -1,1 +1,1 @@
-from .readtoas import ReadTOAs
+from .readtoas import Timfile
