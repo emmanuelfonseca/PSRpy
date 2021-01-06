@@ -125,16 +125,32 @@ class Timfile(object):
             print("    - {0}: {1} scans".format(current_receiver, len(current_toas)))
 
     def _get_backends(self):
+        """
+        An internal function that retrieves list of unique backends based on TOA flags 
+        if they are present.
+        """
 
-        all_backend_data = self.retrieve_flag_data("be")
-        self.backends = list(set(all_backend_data))
-        del(all_backend_data)
+        try:
+            all_backend_data = self.retrieve_flag_data("be")
+            self.backends = list(set(all_backend_data))
+            del(all_backend_data)
+
+        except:
+            print("INFO: no TOA flag for backend name is present.")
 
     def _get_receivers(self):
+        """
+        An internal function that retrieves list of unique receivers based on TOA flags 
+        if they are present.
+        """
 
-        all_backend_data = self.retrieve_flag_data("f")
-        self.receivers = list(set(all_backend_data))
-        del(all_backend_data)
+        try:
+            all_backend_data = self.retrieve_flag_data("f")
+            self.receivers = list(set(all_backend_data))
+            del(all_backend_data)
+
+        except:
+            pass
 
     def _read_toas(self, timfile):
 
