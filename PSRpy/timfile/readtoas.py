@@ -17,10 +17,15 @@ class Timfile(object):
         self.observatory_codes = []
         self.toa_uncertainties = []
         self.toa_flags = []
-        self.is_toa_removed = []
+        self.backends = []
+        self.receivers = []
         
         # now read toas.
         self._read_toas(self.timfile)
+
+        # now derive metadata that is of general use.
+        self._get_backends()
+        self._get_receivers()
 
     def retrieve_flag_data(self, flag_name, flag_type=str):
         """
@@ -45,7 +50,6 @@ class Timfile(object):
         if (len(self.toa_flags) > 0):
 
             for current_flag_line in self.toa_flags:
-                print(current_flag_line)
                 elems = current_flag_line.split()
                 flag_idx = elems.index("-{0}".format(flag_name))
                 flag_data +=[flag_type(elems[flag_idx + 1])]
@@ -54,6 +58,99 @@ class Timfile(object):
             print("WARNING: timfile '{0}' apparently has no TOA flags!".format(self.timfile))
 
         return flag_data
+
+    def summarize(self):
+        """
+        Prints a summary of the TOA data loaded into this object.
+        """
+
+        # print some basic info first.
+        print("Summary and statistics on TOAs in {0}:".format(self.timfile))
+        print("  * a total of {0} total TOAs for {1} backends".format(
+                len(self.toas),
+                len(self.backends)
+            )
+        )
+        print("  * there are data from {0} receivers in the timfile".format(
+                len(self.receivers)
+            )
+        )
+
+        # now move on to per-receiver/backend uncertainty data.
+        print("  * uncertainty stats for each receiver:")
+        all_receiver_data = self.retrieve_flag_data("f")
+
+        for current_receiver in self.receivers:
+            current_uncertainties = []
+
+            for current_idx in range(len(all_receiver_data)):
+                if (all_receiver_data[current_idx] == current_receiver):
+                    current_uncertainties += [self.toa_uncertainties[current_idx]]
+
+            print("    - {0}: {1:.2f}/{2:.2f}/{3:.2f}".format(
+                    current_receiver,
+                    np.min(current_uncertainties),
+                    np.median(current_uncertainties),
+                    np.max(current_uncertainties),
+                )
+            )
+
+        # now print some info on per-receiver/backend timespan data.
+        print("  * timespan data for each receiver:")
+
+        for current_receiver in self.receivers:
+            current_toas = []
+
+            for current_idx in range(len(all_receiver_data)):
+                if (all_receiver_data[current_idx] == current_receiver):
+                    current_toas += [self.toas[current_idx]]
+
+            print("    - {0}: {1:.3f}-{2:.3f}".format(
+                    current_receiver,
+                    np.min(current_toas),
+                    np.max(current_toas),
+                )
+            )
+        
+        # now print total number of observations per receiver/backend combination.
+        print("  * number of scans for each receiver:")
+
+        for current_receiver in self.receivers:
+            current_toas = []
+
+            for current_idx in range(len(all_receiver_data)):
+                if (all_receiver_data[current_idx] == current_receiver):
+                    current_toas += [self.toas[current_idx]]
+
+            print("    - {0}: {1} scans".format(current_receiver, len(current_toas)))
+
+    def _get_backends(self):
+        """
+        An internal function that retrieves list of unique backends based on TOA flags 
+        if they are present.
+        """
+
+        try:
+            all_backend_data = self.retrieve_flag_data("be")
+            self.backends = list(set(all_backend_data))
+            del(all_backend_data)
+
+        except:
+            print("INFO: no TOA flag for backend name is present.")
+
+    def _get_receivers(self):
+        """
+        An internal function that retrieves list of unique receivers based on TOA flags 
+        if they are present.
+        """
+
+        try:
+            all_backend_data = self.retrieve_flag_data("f")
+            self.receivers = list(set(all_backend_data))
+            del(all_backend_data)
+
+        except:
+            pass
 
     def _read_toas(self, timfile):
 
@@ -92,22 +189,23 @@ class Timfile(object):
                 # prior to extracting data, note if TOA is commented out.
                 # it's assumed that all TOA lines have the same structure, 
                 # but that commented lines have a 'C' or '#' as the first 
-                # character, with a whitespace between it and the next data.
+                # character, with a whitespace between it and the next datum.
                 if (elems[0] == "C" or elems[0] == "#"):
-                    self.is_toa_removed += [True]
-                    starting_idx = 1
+                    pass 
 
                 else:
-                    self.is_toa_removed += [False]
-                
-                # now parse TOA data, depending on TOA format.
-                if (self.toa_format == "tempo2"):
-                    self.toa_files += [str(elems[0 + starting_idx])]
-                    self.freqs += [np.float(elems[1 + starting_idx])]
-                    self.toas += [np.float(elems[2 + starting_idx])]
-                    self.toa_uncertainties += [np.float(elems[3 + starting_idx])]
-                    self.observatory_codes += [str(elems[4 + starting_idx])]
-                    self.toa_flags += [" ".join(elems[5 + starting_idx:])]
+                    # now parse TOA data, depending on TOA format.
+                    if (self.toa_format == "tempo2"):
+                        self.toa_files += [str(elems[0])]
+                        self.freqs += [np.float(elems[1])]
+                        self.toas += [np.float(elems[2])]
+                        self.toa_uncertainties += [np.float(elems[3])]
+                        self.observatory_codes += [str(elems[4])]
+                        self.toa_flags += [" ".join(elems[5:])]
 
-                else:
-                    print("WARNING: need to add code for toa format '{0}'".format(self.toa_format))
+                    else:
+                        print("WARNING: need to add code for toa format '{0}'".format(
+                                self.toa_format
+                            )
+                        )
+
