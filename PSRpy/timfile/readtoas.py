@@ -182,6 +182,9 @@ class Timfile(object):
             elif ("MODE" in line):
                 pass
 
+            elif ("TIME" in line):
+                pass
+
             else:                
                 elems = line.split()
                 starting_idx = 0
