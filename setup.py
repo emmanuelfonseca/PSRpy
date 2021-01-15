@@ -13,6 +13,7 @@ setup(
         "PSRpy/bin/compute_position_grid.py",
         "PSRpy/bin/compute_orbital_phase_epochs.py",
         "PSRpy/bin/fit_orbit.py",
+        "PSRpy/bin/generate_fake_toas.py",
         "PSRpy/bin/plot_residuals.py",
     ],
 
