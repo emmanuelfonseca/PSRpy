@@ -147,6 +147,9 @@ if (len(labels) != 0):
 
             axs[0].set_ylabel(r"$\mathcal{R}$ ($\mu$s)", fontproperties=font)
 
+            if (use_grid):
+                axs[0].grid(linestyle="--")
+
         else:
             axs.errorbar(
                 current_toas,
@@ -157,6 +160,7 @@ if (len(labels) != 0):
 
             axs.set_xlabel(x_axis_label, fontproperties=font)
             axs.set_ylabel(r"$\mathcal{R}$ ($\mu$s)", fontproperties=font)
+
 else:
     plt.errorbar(
         toa_data["toas"],
@@ -181,20 +185,16 @@ if (dmx_file is not None and n_panels == 2):
         times,
         np.array(dmx_val) * 1e3,
         yerr=np.array(dmx_err) * 1e3,
-        fmt='+'
+        fmt='+',
+        color="k"
     )
 
     axs[1].get_shared_x_axes().join(axs[0], axs[1])
     axs[1].set_xlabel(x_axis_label, fontproperties=font)
     axs[1].set_ylabel(r"$\Delta$DM (10$^{-3}$ pc cm$^{-3}$)", fontproperties=font)
 
-# set grid lines if desired.
-if (use_grid and n_panels > 1):
-    for ii in range(n_panels):
-        axs[ii].grid(linestyle="--")
-
-else:
-    plt.grid(linestyle="--")
+    if (use_grid):
+        axs[1].grid(linestyle="--")
 
 # save plot to file if desired.
 if save_plot:
