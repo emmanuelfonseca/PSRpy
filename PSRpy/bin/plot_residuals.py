@@ -58,6 +58,13 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--legend", 
+    action="store_true", 
+    dest="use_legend", 
+    help="If set, then generate a legend for the residuals figure/panel."
+)
+
+parser.add_argument(
     "--save", 
     action="store_true", 
     dest="save_plot", 
@@ -79,8 +86,17 @@ info_file = args.info_file
 save_filename = args.save_filename
 x_limits = args.x_limits
 use_grid = args.use_grid
+use_legend = args.use_legend
 save_plot = args.save_plot
 time_in_years = args.time_in_years
+
+# before moving forward, define an alias dictionary for legend labels.
+label_alias = {
+    "CHIME": "CHIME",
+    "CHIME_CHIME": "CHIME",
+    "Rcvr1_2_GUPPI": "GUPPI/1420-MHz",
+    "Rcvr_800_GUPPI": "GUPPI/820-MHz",
+}
 
 # extract TOA/info data.
 toa_data, labels = read_resid2(resid2_file, info_file=info_file)
@@ -118,7 +134,7 @@ font = FontProperties()
 font.set_name("sans-serif")
 font.set_size(13)
 
-fig, axs = plt.subplots(n_panels, constrained_layout=True)
+fig, axs = plt.subplots(n_panels)
 x_axis_label = "MJD"
 
 if (len(labels) != 0):
@@ -142,10 +158,14 @@ if (len(labels) != 0):
                 current_toas,
                 current_residuals,
                 yerr=current_residuals_err,
-                fmt='+'
+                fmt='+',
+                label=label_alias[current_label]
             )
 
             axs[0].set_ylabel(r"$\mathcal{R}$ ($\mu$s)", fontproperties=font)
+
+            if (use_grid):
+                axs[0].grid(linestyle="--")
 
         else:
             axs.errorbar(
@@ -157,6 +177,10 @@ if (len(labels) != 0):
 
             axs.set_xlabel(x_axis_label, fontproperties=font)
             axs.set_ylabel(r"$\mathcal{R}$ ($\mu$s)", fontproperties=font)
+
+    if (use_legend):
+        axs[0].legend(loc="upper left", ncol=3)
+
 else:
     plt.errorbar(
         toa_data["toas"],
@@ -181,23 +205,20 @@ if (dmx_file is not None and n_panels == 2):
         times,
         np.array(dmx_val) * 1e3,
         yerr=np.array(dmx_err) * 1e3,
-        fmt='+'
+        fmt='+',
+        color="k"
     )
 
     axs[1].get_shared_x_axes().join(axs[0], axs[1])
     axs[1].set_xlabel(x_axis_label, fontproperties=font)
     axs[1].set_ylabel(r"$\Delta$DM (10$^{-3}$ pc cm$^{-3}$)", fontproperties=font)
 
-# set grid lines if desired.
-if (use_grid and n_panels > 1):
-    for ii in range(n_panels):
-        axs[ii].grid(linestyle="--")
-
-else:
-    plt.grid(linestyle="--")
+    if (use_grid):
+        axs[1].grid(linestyle="--")
 
 # save plot to file if desired.
-if save_plot:
-    pass
+if (save_plot):
+    plt.savefig("{0}.pdf".format(save_filename), fmt="pdf")
 
+plt.tight_layout()
 plt.show()

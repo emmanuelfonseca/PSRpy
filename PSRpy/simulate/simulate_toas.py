@@ -117,7 +117,7 @@ def simulate_TOAs(
     # first, simulate rough timestamps based on configuration parameters.
     pulse_mjds = np.linspace(epoch_start, epoch_finish, num=n_epochs)
     pulse_mjds += np.random.uniform(-jitter_epoch, jitter_epoch, n_epochs)
-    toa_uncertainties = np.fabs(np.random.normal(0., 1., n_epochs)) + mean_toa_uncertainty
+    toa_uncertainties = np.fabs(np.random.normal(0., 1., n_epochs)) * rms_residual + mean_toa_uncertainty
 
     # next, generate the array of frequency channels based on configuration parameters.
     frequency_lower = central_frequency - bandwidth / 2 * (1 - 1 / n_channels_per_epoch)
