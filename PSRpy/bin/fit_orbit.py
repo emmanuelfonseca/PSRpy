@@ -4,10 +4,10 @@ from PSRpy.orbit.velocities import doppler_shift_period
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 import numpy as np
+import argparse
 import sys
 
-plt.style.use('classic')
-
+# define some functions specific to this script.
 def guess_binary_model(mjds, period, period_err):
     """
     Creates an interactive viewer of proposed model to use as a starting guess 
@@ -50,18 +50,6 @@ def guess_binary_model(mjds, period, period_err):
 
     return binary_pars
 
-
-# read/unload data and create initial-guess model.
-infile = (sys.argv)[1]
-data = np.loadtxt(infile)
-mjds = data[:, 0]
-periods = data[:, 1]
-periods_err = data[:, 2]
-pars = guess_binary_model(mjds, periods, periods_err)
-
-sys.exit()
-
-# now, fit the data.
 def chisq(parameters):
     """
     Computes the sum of square of differences between data and model of the data, 
@@ -72,6 +60,32 @@ def chisq(parameters):
     model = p0 * (1 + doppler_shift_orbit(mjds, p1, p2, p3, p4, p5))
     return np.sum(((periods - model) / periods_err)**2) 
 
+# now define a simple argparse object.
+parser = argparse.ArgumentParser(description="an interactive script for determining rough " + \
+    "orbital parameters from a timeseries of pulsar-spin periods."
+)
+
+parser.add_argument(
+    "input_file",
+    type=str,
+    help="an ASCII file containing period timeseries and uncertainties for each " + \
+         "period; it is assumed that data are in whitespace-separated columns of: " + \
+         "timestamp; period (in ms); and uncertainty on period (in ms)."
+)
+
+# TODO: add option to fit circular orbit (i.e., don't fit for eccentricity).
+
+# read/unload data and create initial-guess model.
+args = parser.parse_args()
+
+input_file = args.input_file
+data = np.loadtxt(input_file, usecols=(0, 1, 2))
+mjds = data[:, 0]
+periods = data[:, 1]
+periods_err = data[:, 2]
+pars = guess_binary_model(mjds, periods, periods_err)
+
+# now, fit the data.
 keep_looping = True
 
 while keep_looping:
@@ -82,7 +96,9 @@ while keep_looping:
     pars = result.x
     plt.subplot(211)
     plt.errorbar(mjds, periods, yerr=periods_err, fmt='ro')
-    initial_model = pars[0] * (1 + doppler_shift_orbit(mjds, pars[1], pars[2], pars[3], pars[4], pars[5]))
+    initial_model = pars[0] * (1 + doppler_shift_orbit(
+        mjds, pars[1], pars[2], pars[3], pars[4], pars[5])
+    )
     plt.plot(mjds, initial_model, 'b-')
     plt.ylabel('Spin Period (ms)')
     plt.grid()
