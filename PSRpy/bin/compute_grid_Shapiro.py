@@ -15,46 +15,179 @@ from matplotlib.font_manager import FontProperties
 font = FontProperties()
 font.set_name('serif')
 
-parser = argparse.ArgumentParser(description='Generate a uniform, 2-D grid of TEMPO2 chi-squared values for different combinations of M2/COSI Shapiro parameters. Note for the future: work in an option to use M2/M1 (or M2/MTOT) combination instead.')
+parser = argparse.ArgumentParser(description=
+    "Generates a uniform grid of TEMPO/TEMPO2 chi-squared values for different " +  
+    "combinations of M2/COSI parameters of the Shapiro time delay. If certain " + 
+    "command-line options are chosen, a three-dimensional grid will be computed, " + 
+    "with the third axis being either the pulsar distance or ascending-node longitude."
+)
 
-parser.add_argument('-f', nargs=1, action='store', dest='parfile', required=True, help='Input TEMPO parfile with M2/SINI parameters.')
-parser.add_argument('-G', action='store_true', dest='useGLS', help='Use GLS fitting in tempo.')
-parser.add_argument('-n', nargs=1, action='store', dest='Ngrid', default=[50], type=int, help='Number of grid points to generate. (Default: 50)')
-parser.add_argument('-p', nargs=1, action='store', dest='pnum', default=[None], type=str, help='TEMPO pulse-number file. (Not required.)')
-parser.add_argument('timfile', nargs=1, action='store', help='Input TEMPO2 .tim file containing TOAs.')
-parser.add_argument('--M2', nargs=2, action='store', metavar=('min', 'max'), dest='M2limits', default=[0.01, 1.], type=float, help='Lower/upper limits of grid along M2 coordinate. (Default: 0.01 to 1)')
-parser.add_argument('--COSI', nargs=2, action='store', metavar=('min', 'max'), dest='COSIlimits', default=[0., 0.99], type=float, help='Lower/upper limits of grid along COSI coordinate. (Default: 0 to 0.99)')
-parser.add_argument('--H3', nargs=2, action='store', metavar=('min', 'max'), dest='H3limits', default=[0.01, 1.0], type=float, help='Lower/upper limits of grid along H3 coordinate. (Default: 0.01 to 1.0)')
-parser.add_argument('--H4', nargs=2, action='store', metavar=('min', 'max'), dest='H4limits', default=[0.01, 1.0], type=float, help='Lower/upper limits of grid along H4 coordinate. (Default: 0.01 to 1.0)')
-parser.add_argument('--STIG', nargs=2, action='store', metavar=('min', 'max'), dest='STIGlimits', default=[0.01, 0.99], type=float, help='Lower/upper limits of grid along STIG coordinate. (Default: 0.01 to 0.99)')
-parser.add_argument('--THETA', nargs=2, action='store', metavar=('min', 'max'), dest='THETAlimits', default=[0., 0.], type=float, help='Lower/upper limits of grid along THETA (kinematic XDOT) coordinate. (Default: 0 to 360 degrees.)')
-parser.add_argument('--M1', nargs=2, action='store', metavar=('min', 'max'), dest='M1limits', default=[0.1, 10.], type=float, help='Lower/upper limits of grid of values for M1. (Default: 0 to 10 solar masses.)')
-parser.add_argument('--MTOT', nargs=2, action='store', metavar=('min', 'max'), dest='MTOTlimits', default=[0.1, 10.], type=float, help='Lower/upper limits of grid of values for MTOT. (Default: 0 to 10 solar masses.)')
-parser.add_argument('--PX', nargs=2, action='store', metavar=('min', 'max'), dest='PXlimits', default=[0., 0.], type=float, help='Lower/upper limits of grid of values for PX. (Default: 0.01 to 10 mas.)')
-parser.add_argument('--XOMDOT', nargs=2, action='store', metavar=('min', 'max'), dest='XOMDOTlimits', default=[0., 0.], type=float, help='Lower/upper limits of grid of values for PX. (Default: 0.01 to 10 mas.)')
-parser.add_argument('--H3STIG', action='store_true', dest='gridH3STIG', help='Grid of the H3/STIG parameters instead. (Requires a solution that has these parameters already set.)')
-parser.add_argument('--M2MTOT', action='store_true', dest='gridM2MTOT', help='Grid of the M2/MTOT parameters instead of M2/COSI.')
-parser.add_argument('--OMDOT', action='store_true', dest='fixOMDOT', help='Compute and fix GR component of OMDOT for each M2/COSI coordinate. (This option only works if OMDOT is set in the input parfile.)')
-parser.add_argument('--PBDOT', action='store_true', dest='fixPBDOT', help='Compute and fix GR component of PBDOT for each M2/COSI coordinate. (This option only works if PBDOT is set in the input parfile.)')
-parser.add_argument('--GAMMA', action='store_true', dest='fixGAMMA', help='Compute and fix GR component of GAMMA for each M2/COSI coordinate. (This option only works if GAMMA is set in the input parfile.)')
-parser.add_argument('--DDGR', action='store_true', dest='gridDDGR', help='Grid over M2/MTOT using the DDGR binary model; currently floats all other DDGR parameters (e.g. XOMDOT, XPBDOT).')
-parser.add_argument('--H3H4', action='store_true', dest='gridH3H4', help='Grid over H3/H4 using the ELL1H binary model.')
-parser.add_argument('--DDS', action='store_true', dest='gridDDS', help='Grid over M2/COSI using the DDS binary model.')
-parser.add_argument('--DDK', action='store_true', dest='gridDDK', help='Grid over M2/COSI/KOM using the DDK binary model.')
-parser.add_argument('--tempo', action='store_true', dest='useTEMPO', help='Perform grid using TEMPO instead.')
-parser.add_argument('--qrfit', action='store_true', dest='useQRFIT', help='Use QR matrix decomposition in TEMPO2 instead of Cholesky method.')
-parser.add_argument('--M1M2', action='store_true', dest='grid_m1m2', help='Uniformly grid over M1/M2.')
-parser.add_argument('--PK2', action='store_true', dest='use_PK2', help='Compute second order post-Keplerian version of OMODT.')
-parser.add_argument('--EXP1', action='store_true', dest='exp_OMDOT', help='Skip TEMPO run if OMDOT is outside of 10-sigma range. Experimental feature.')
-parser.add_argument('--fitM2', action='store_true', dest='fitM2', help='Force M2 to be fit during grid.')
-parser.add_argument('--fitSINI', action='store_true', dest='fitSINI', help='Force SINI to be fit during grid.')
+parser.add_argument(
+    "timfile", action="store", 
+    help="ASCII file containing TOAs that are compatible with TEMPO or TEMPO2."
+)
 
+parser.add_argument(
+    "-f", action='store', dest="parfile", required=True, 
+    help="Input TEMPO or TEMPO2 parfile with M2/SINI parameters."
+)
 
+parser.add_argument(
+    "-G", action="store_true", dest="useGLS", help="Use GLS fitting in TEMPO."
+)
+
+parser.add_argument(
+    "-n", action="store", dest="Ngrid", default=50, type=int, 
+    help="Number of grid points to generate. (Default: 50)"
+)
+
+parser.add_argument(
+    "-p", action="store", dest="pnum", default=None, type=str, help="TEMPO pulse-number file."
+)
+
+parser.add_argument(
+    "--M2", nargs=2, action="store", metavar=("min", "max"), dest="M2limits", default=[0.01, 1.], 
+    type=float, help="Limits of grid along M2 coordinate. (Default: 0.01 to 1)"
+)
+
+parser.add_argument(
+    "--COSI", nargs=2, action="store", metavar=("min", "max"), dest="COSIlimits", 
+    default=[0., 0.99], type=float, 
+    help="Limits of grid along COSI coordinate. (Default: 0 to 0.99)"
+)
+
+parser.add_argument(
+    "--H3", nargs=2, action="store", metavar=("min", "max"), dest="H3limits", 
+    default=[0.01, 1.0], type=float, 
+    help="Limits of grid along H3 coordinate. (Default: 0.01 to 1.0)"
+)
+
+parser.add_argument(
+    "--H4", nargs=2, action="store", metavar=("min", "max"), dest="H4limits", 
+    default=[0.01, 1.0], type=float, 
+    help="Limits of grid along H4 coordinate. (Default: 0.01 to 1.0)"
+)
+
+parser.add_argument(
+    "--STIG", nargs=2, action="store", metavar=("min", "max"), dest="STIGlimits", 
+    default=[0.01, 0.99], type=float, 
+    help="Limits of grid along STIG coordinate. (Default: 0.01 to 0.99)"
+)
+
+parser.add_argument(
+    "--THETA", nargs=2, action="store", metavar=("min", "max"), dest="THETAlimits", 
+    default=[0., 0.], type=float, 
+    help="Limits of grid along THETA (kinematic XDOT) coordinate. (Default: 0 to 360 degrees.)"
+)
+
+parser.add_argument("--M1", nargs=2, action="store", metavar=("min", "max"), dest="M1limits", 
+    default=[0.1, 10.], type=float, 
+    help="Limits of grid along M1 coordinate. (Default: 0 to 10 solar masses.)"
+)
+
+parser.add_argument(
+    "--MTOT", nargs=2, action="store", metavar=("min", "max"), dest="MTOTlimits", 
+    default=[0.1, 10.], type=float, 
+    help="Limits of grid of values for MTOT. (Default: 0 to 10 solar masses.)"
+)
+
+parser.add_argument(
+    "--PX", nargs=2, action="store", metavar=("min", "max"), dest="PXlimits", 
+    default=[0., 0.], type=float, 
+    help="Limits of grid along PX coordinate. (Default: 0.01 to 10 mas.)"
+)
+
+parser.add_argument(
+    "--XOMDOT", nargs=2, action="store", metavar=("min", "max"), dest="XOMDOTlimits", 
+    default=[0., 0.], type=float, 
+    help="Lower/upper limits of grid of values for PX. (Default: 0.01 to 10 mas.)"
+)
+
+parser.add_argument(
+    "--H3STIG", action="store_true", dest="gridH3STIG", 
+    help="Grid over the H3/STIG parameters. (Requires a solution that uses these parameters.)"
+)
+
+parser.add_argument(
+    "--M2MTOT", action="store_true", dest="gridM2MTOT", 
+    help="Grid of the M2/MTOT parameters instead of M2/COSI."
+)
+
+parser.add_argument(
+    "--OMDOT", action="store_true", dest="fixOMDOT", 
+    help="Compute and fix GR component of OMDOT for each M2/COSI coordinate. " + 
+         "(This option only works if OMDOT is set in the input parfile.)"
+)
+
+parser.add_argument("--PBDOT", action="store_true", dest="fixPBDOT", 
+    help="Compute and fix GR component of PBDOT for each M2/COSI coordinate. " + 
+         "(This option only works if PBDOT is set in the input parfile.)'"
+)
+
+parser.add_argument(
+    "--GAMMA", action="store_true", dest="fixGAMMA", 
+    help="Compute and fix GR component of GAMMA for each M2/COSI coordinate. " + 
+         "(This option only works if GAMMA is set in the input parfile.)"
+)
+
+parser.add_argument(
+    "--DDGR", action="store_true", dest="gridDDGR", 
+    help="Grid over M2/MTOT using the DDGR binary model; " + 
+         "currently floats all other DDGR parameters (e.g. XOMDOT, XPBDOT)."
+)
+
+parser.add_argument(
+    "--H3H4", action="store_true", dest="gridH3H4", 
+    help="Grid over H3/H4 using the ELL1H binary model."
+)
+
+parser.add_argument(
+    "--DDS", action="store_true", dest="gridDDS", 
+    help="Grid over M2/COSI using the DDS binary model."
+)
+
+parser.add_argument(
+    "--DDK", action="store_true", dest="gridDDK", 
+    help="Grid over M2/COSI/KOM using the DDK binary model."
+)
+
+parser.add_argument(
+    "--tempo", action="store_true", dest="useTEMPO", 
+    help="Perform grid using TEMPO instead."
+)
+
+parser.add_argument(
+    "--qrfit", action="store_true", dest="useQRFIT", 
+    help="Use QR matrix decomposition in TEMPO2 instead of Cholesky method."
+)
+
+parser.add_argument(
+    "--M1M2", action="store_true", dest="grid_m1m2", help='Uniformly grid over M1/M2.'
+)
+
+parser.add_argument("--PK2", action="store_true", dest="use_PK2", 
+    help="Compute second order post-Keplerian version of OMODT."
+)
+
+parser.add_argument(
+    "--EXP1", action="store_true", dest="exp_OMDOT", 
+    help="Skip TEMPO run if OMDOT is outside of 30-sigma range. Experimental feature."
+)
+
+parser.add_argument(
+    "--fitM2", action="store_true", dest="fitM2", help="Force M2 to be fit during grid."
+)
+
+parser.add_argument(
+    "--fitSINI", action="store_true", dest="fitSINI", help="Force SINI to be fit during grid."
+)
+
+# collect and retrieve command-line arguments.
 args = parser.parse_args()
-intim = (args.timfile)[0]
-inpar = (args.parfile)[0]
-inpnum = (args.pnum)[0]
-Ngrid = (args.Ngrid)[0]
+intim = args.timfile
+inpar = args.parfile
+inpnum = args.pnum
+Ngrid = args.Ngrid
 m2_lo, m2_hi = args.M2limits
 cosi_lo, cosi_hi = args.COSIlimits
 h3_lo, h3_hi = args.H3limits
@@ -87,10 +220,9 @@ fitM2 = args.fitM2
 fitSINI = args.fitSINI
 grid_m2cosi = True
 
+# decide which type of grid to generate.
 if (gridDDGR or gridM2MTOT):
     grid_m2cosi = False
-
-tolerance = 30.
 
 if (any([px_lo, px_hi]) != 0.):
     fixPX = True
@@ -104,22 +236,23 @@ if (any([xomdot_lo, xomdot_hi]) != 0.):
 if (gridM1M2 or gridH3STIG or gridH3H4):
     grid_m2cosi = False
 
-# select binary MSP here and set grid params here.
-theta = np.linspace(theta_lo, theta_hi, num=Ngrid)
+# define possible grid params here.
+# TODO: make this step more efficient by only initializing 
+# X, Y, and (if applicable) Z arrays, and overloading those 
+# values with arrays for the appropriate parameters.
 cosi = np.linspace(cosi_lo, cosi_hi, num=Ngrid)
+h3 = np.linspace(h3_lo, h3_hi, num=Ngrid)
+h4 = np.linspace(h4_lo, h4_hi, num=Ngrid)
 m1 = np.linspace(m1_lo, m1_hi, num=Ngrid)
 m2 = np.linspace(m2_lo, m2_hi, num=Ngrid)
 mtot = np.linspace(mtot_lo, mtot_hi, num=Ngrid)
-h3 = np.linspace(h3_lo, h3_hi, num=Ngrid)
-h4 = np.linspace(h4_lo, h4_hi, num=Ngrid)
-stig = np.linspace(stig_lo, stig_hi, num=Ngrid)
 px = np.linspace(px_lo, px_hi, num=Ngrid)
+stig = np.linspace(stig_lo, stig_hi, num=Ngrid)
+theta = np.linspace(theta_lo, theta_hi, num=Ngrid)
 xomdot = np.linspace(xomdot_lo, xomdot_hi, num=Ngrid)
 
-# should not have to edit things from now on.
-# but, you never know...
-
 # set grid/tempo parameters.
+tolerance = 30.
 chisq = np.zeros((Ngrid, Ngrid))
 chisq_3D = np.zeros((Ngrid, Ngrid, Ngrid))
 sini_bestfit, m2_bestfit, mtot_bestfit = 0, 0, 0
