@@ -149,7 +149,7 @@ def compute_pdf2D_m1cosi(cosi_vals, m2_vals, m1_vals, m1_bins, mass_function, pd
 
     return pdf2D_m1cosi_exp
 
-pin = open(infile[0])
+pin = open(infile[0], "rb")
 GridDict = pickle.load(pin)
 
 sini_bestfit = GridDict['SINI_bestfit']
@@ -1131,7 +1131,7 @@ for current_parameter in parameters:
         pdf = SDpdfs["pdf_{0}".format(current_parameter)]
         credible_interval = compute_credible_interval(variable, pdf)
         SDpdfs["credible_interval_{0}".format(current_parameter)] = credible_interval
-        print "    ".join(map(str, credible_interval))
+        print("    ".join(map(str, credible_interval)))
 
 # write to a .npz file.
 np.savez(
