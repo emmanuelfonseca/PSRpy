@@ -4,6 +4,10 @@ import numpy as np
 import sys
 
 class Timfile(object):
+    """
+    A Python class for reading and analyze TOA data stored in formats recognized by 
+    the pulsar community.
+    """
 
     def __init__(self, timfile, toa_format):
 
@@ -113,16 +117,22 @@ class Timfile(object):
             )
         
         # now print total number of observations per receiver/backend combination.
-        print("  * number of scans for each receiver:")
+        print("  * number of TOAs (and unique MJDs) for each receiver:")
 
         for current_receiver in self.receivers:
+            current_files = []
             current_toas = []
 
             for current_idx in range(len(all_receiver_data)):
                 if (all_receiver_data[current_idx] == current_receiver):
+                    current_files += [self.toa_files[current_idx]]
                     current_toas += [self.toas[current_idx]]
 
-            print("    - {0}: {1} scans".format(current_receiver, len(current_toas)))
+            n_epochs = len(list(set(current_files)))
+            print("    - {0}: {1} TOAs ({2} epochs)".format(
+                    current_receiver, len(current_toas), n_epochs
+                )
+            )
 
     def _get_backends(self):
         """
