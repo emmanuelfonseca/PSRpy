@@ -12,7 +12,7 @@ def represents_an_int(input_string):
 
     try:
         value = int(input_string)
-        is_an_interger = True
+        is_an_integer = True
 
     except ValueError:
         pass
