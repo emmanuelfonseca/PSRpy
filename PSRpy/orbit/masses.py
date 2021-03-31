@@ -14,7 +14,9 @@ def mass_function(pb, x):
     """
 
     nb = 2 * np.pi / pb / 86400
-    return nb**2 * x**3 / T_sun
+    mf = nb**2 * x**3 / T_sun.value
+
+    return mf
 
 def mass_companion(pb, x, mp, sini, mc=0.5, tolerance=1e-12):
     """
