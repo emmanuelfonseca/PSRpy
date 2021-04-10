@@ -1,11 +1,11 @@
 #! /usr/bin/python
 
-from PSRpy.utils.math import represents_an_int
 from PSRpy.const import c, G, M_sun, T_sun
 from . import config_parfile as config
 from astropy.coordinates import Angle
 from . import printpar
 from re import match
+import PSRpy.utils.math as math
 import matplotlib.pyplot as plt
 import astropy.units as u
 import numpy as np
@@ -184,7 +184,7 @@ class Parfile(object):
 
                     # the following if/else is to treat ATNF parfiles 
                     # that have no fit flags but do have uncertainties.
-                    is_flag = represents_an_int(lsplit[2])
+                    is_flag = math.represents_an_int(lsplit[2])
 
                     if is_flag:
                         current_dict["flag"] = int(lsplit[2])
@@ -444,9 +444,129 @@ class Parfile(object):
 
                 setattr(self,parameter + 'flag', 0)
 
-    def write(self, outfile="out.par"):
+    def write(self, outfile="out.par", sig_fig_error=2):
         """
         Writes parameter-file Python object to ASCII file.
         """
 
-        printpar.PrintPar(self, outfile=outfile)
+        #printpar.PrintPar(self, outfile=outfile)
+        file_lines = []
+
+        # the following is new.
+        for current_parameter in config.parameter_list_full:
+            current_dict = getattr(self, current_parameter)
+
+            # treat error-adjustment and all other parameters separately.
+            if current_parameter not in config.parameter_list_error:
+                current_value = current_dict["value"]
+                current_line = ""
+                
+                # if attribute is not empty, proceed.
+                if current_value is not None:
+                    current_flag = current_dict["flag"]
+
+                    # if flag is present, determine line to print depending on 
+                    # whether an uncertainty is present or not.
+                    if current_flag is not None:
+                        current_error = current_dict["error"]
+
+                        if current_error is not None:
+                            current_type = "f"
+                            length_value = math.order_of_magnitude(current_dict["error"])
+                            length_value += sig_fig_error
+
+                            # if parameters are usually presented in exponent form, 
+                            # then adjust here as needed.
+                            if current_parameter in config.parameter_list_exponent:
+                                current_type = "e"
+                                length_value = 7
+
+                            length_name = 25 - length_value 
+                            current_line = "{0:<{1}} {2:>.{3}{4}}  {5}  {6}\n".format(
+                                current_parameter, length_name, current_value, 
+                                length_value, current_type, current_flag, current_error
+                            )
+                            
+                    # otherwise, just print parameter name and value
+                    else:
+                        current_type = "f"
+                        length_value = 10
+                        length_value += sig_fig_error
+
+                        # if parameters are usually presented in exponent form, 
+                        # then adjust here as needed.
+                        if current_parameter in config.parameter_list_exponent:
+                            current_type = "e"
+                            length_value = 7
+
+                        length_name = 25 - length_value 
+                        current_line = ""
+                        
+                        if (current_parameter in config.parameter_list_string or
+                            current_parameter in config.parameter_list_int):
+                            current_line = "{0:<{1}} {2:>{3}}\n".format(
+                                current_parameter, length_name, current_value, length_value
+                            )
+
+                        else:
+                            current_line = "{0:<{1}} {2:>.{3}}\n".format(
+                                current_parameter, length_name, current_value, 
+                                length_value, current_type
+                            )
+
+                    file_lines.append(current_line)
+
+                else:
+                    pass
+
+            # now treat noise and JUMP terms.
+            else:
+
+                # if not empty, proceed.
+                if current_dict:
+                    
+                    # loop over dict entries.
+                    for current_key in current_dict.keys():
+                        current_line = ""
+                        current_option = current_dict[current_key]["option"]
+                        current_value = current_dict[current_key]["value"]
+
+                        # if not a JUMP, then print out all entries.
+                        if current_parameter != "JUMP":
+                            current_line = "{0}   {1}   {2}   {3}\n".format(
+                                current_parameter, current_option, current_key, 
+                                current_value
+                            )
+
+                        # else, treat jump as a fit parameter with option.
+                        else:
+                            current_flag = current_dict[current_key]["flag"]
+
+                            if current_flag is not None:
+                                current_error = current_dict[current_key]["error"]
+                                current_line = "{0}   {1}   {2}   {3}   {4}".format(
+                                    current_parameter, current_option, current_key, 
+                                    current_value, current_flag
+                                )
+
+                                if current_error is not None:
+                                    current_line = "{0}   {1}\n".format(
+                                        current_line, current_error
+                                    )
+
+                                else:
+                                    current_line = "{0}\n".format(current_line)
+
+                            else:
+                                current_line = "{0}   {1}   {2}   {3}\n".format(
+                                    current_parameter, current_option, current_key, 
+                                    current_value
+                                )
+                                
+
+                        file_lines.append(current_line)
+
+        # finally, write parfile.
+        fout = open(outfile, "w")
+        fout.writelines(file_lines)
+        fout.close()
