@@ -1,3 +1,13 @@
+import numpy as np
+
+def order_of_magnitude(value):
+    """
+    Determines the order of magnitude of the provided value..
+    """
+
+    log_value = np.log10(np.fabs(value))
+    return int(np.fabs(np.round(log_value)))
+
 def represents_an_int(input_string):
     """
     Checks if string can be represented as a Python integer and returns a boolean.
