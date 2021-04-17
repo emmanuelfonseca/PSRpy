@@ -384,8 +384,25 @@ class Parfile(object):
                 pbdot = getattr(self, "PBDOT") * 1e-12
                 new_PB = getattr(self, "PB") + (pbdot * diff_binary) / 86400
                 setattr(self, "PB", new_PB)
-            
-    def step(self, uniform_factor=1):
+ 
+    def set(self, parameter: str, new_dict: dict):
+        """
+        Sets desired parfile attributes to supplied values.
+        """
+
+        # first, extract existing dictionary for designated parameter.
+        current_dict = getattr(self, parameter).copy()
+
+        # next, loop over all supplied keys and overload values with 
+        # those supplied in the input dictionary.
+        for current_key in new_dict.keys():
+            new_value = new_dict[current_key]
+            current_dict[current_key] = new_value
+
+        # finally, set the new dictionary.
+        setattr(self, parameter, current_dict)
+           
+    def step(self, uniform_factor: int = 1):
         """
         Randomly steps all parameters with uncertainties in parifle.
         """
@@ -486,6 +503,18 @@ class Parfile(object):
                                 current_parameter, length_name, current_value, 
                                 length_value, current_type, current_flag, current_error
                             )
+
+                        else:
+                            current_type = "f"
+                            length_value = 10
+                            length_value += sig_fig_error
+                            length_name = 25 - length_value
+
+                            current_line = "{0:<{1}} {2:>.{3}{4}}  {5}\n".format(
+                                current_parameter, length_name, current_value, 
+                                length_value, current_type, current_flag
+                            )
+
                             
                     # otherwise, just print parameter name and value
                     else:
