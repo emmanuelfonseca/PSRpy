@@ -1,0 +1,14 @@
+site_name: PSRpy
+
+theme: 
+    name: material
+    highlightjs: true
+    hljs_languages:
+        - yaml
+
+nav:
+    - home: index.md
+    - about: about.md
+    - usage:
+        - Interacting with Parfiles: usage/parfiles.md
+
