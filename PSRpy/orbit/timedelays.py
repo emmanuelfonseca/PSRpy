@@ -1,54 +1,86 @@
 #! /usr/bin/python
 
 from .ssbfuncs import planet_position_ecliptic, pulsar_position_ecliptic
-from .elements import mean_anomaly, ecc_anomaly, true_anomaly, periastron_argument
+from .elements import anomaly_mean, anomaly_eccentric, anomaly_true, argument_periastron
 from .orbvectors import radius_eccentric_orbit
 from ..const import au, c, d2r, pc, T_sun
 import numpy as np
 import sys
 
-def orbital_parallax_delay(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, ecl_l, d=1, basis=2):
+def delay_orbit_parallax(time: float, axis_semimajor_projected: float, orbital_period: float, 
+    eccentricity: float, argument_periastron: float, t0: float, inclination: float, 
+    longitude_node_ascending: float, latitude_ecliptic: float, longitude_ecliptic: float):
     """
-    Computes the parallax timing delay for the pulsar-binary, given a set 
+    Computes the parallax timing delay due to the orbital motion of the pulsar, given a set 
     of ecliptic coordinates, orbital parameters and distance measure.
 
-    Inputs:
-        - x = projected semimajor axis [lt-s]
-        - pb = orbital period [days]
-        - ecc = eccentricity [  ]
-        - om  = argument of periastron [deg]
-        - t0 = epoch of periastron passage [MJD]
-        - epoch = epoch where delay is evaluated [MJD]
-        - incl = system inclination [deg]
-        - asc = longitude of ascending node [deg]
-        - ecl_b = beta [deg]
-        - ecl_l = lambda [deg]
-        - d = distance [kpc]
-        - basis = basis of coordinate system:
-            * 1 = plane of sky
-            * 2 = ecliptic coordinate system
+    Parameters
+    ----------
+    time : array_like
+        epoch at which to evaulate time delay 
 
-    Output:
-        - time delay [s]
+    axis_semimajor_projected : float 
+        component of Keplerian semimajor axis, projected onto the line of sight, 
+        in units of light-seconds
+
+    orbital_period : float 
+        period of Keplerian orbit, in units of days
+
+    eccentricity : float
+        Keplerian eccentricity for closed orbits (i.e., 0 <= eccentricity < 1)
+
+    argument_periastron : float 
+        Keplerian argument of periastron, in units of degrees
+
+    t0 : float 
+        epoch of periastron passage, in units of MJD
+
+    inclination : float 
+        geometric inclination of orbital system, in units of degrees
+
+    longitude_node_ascending : float 
+        geometric longitude of ascending node for orbit, in units of degrees
+
+    latitude_ecliptic : float
+        ecliptic longitude of binary system
+
+    longitude_ecliptic : float
+        ecliptic longitude of binary system
+
+    Returns
+    ------
+    delay : array_like
+        time delay due to orbital parallax motion
     """
 
-    r_pulsar = ov.radius_eccentric_orbit(x, pb, ecc, om, t0, epoch, incl, asc, 
-        ecl_b, ecl_l, basis=basis)
-    r_pulsar *= au
-    s = ssb.pulsar_position_ecliptic(ecl_b, ecl_l)
+    # compute terms needed to define radius vector.
+    sini = np.sin(inclination * np.pi / 180)
+    ap = axis_semimajor_projected / sini * c / au
 
-    if (isinstance(epoch, np.ndarray)):
-        delay = np.zeros(len(epoch))
+    # now compute position and direction vectors.
+    direction = ssb.pulsar_position_ecliptic(latitude_ecliptic, longitude_ecliptic)
+    position_pulsar = ov.radius_orbit_eccentric(time, ap, orbital_period, eccentricity, 
+        argument_periastron, t0, inclination, longitude_node_ascending, 
+        latitude_ecliptic=latitude_ecliptic, longitude_ecliptic=longitude_ecliptic, ecliptic=True)
+ 
+    # now compute cross product.
+    delay = None
 
-        for ii in range(len(epoch)):
-            delay[ii] = np.sum(np.cross(r_pulsar[:, ii], s)**2)
+    if isinstance(epoch, np.ndarray):
+        delay = np.zeros(len(time))
 
-        return delay / 2 / c / (d * 1000 * pc)
+        for ii in range(len(time)):
+            delay[ii] = np.sum(np.cross(position_pulsar[:, ii], direction)**2)
+
+        delay = delay / 2 / c / (d * 1000 * pc)
 
     else:
-        return np.sum(np.cross(r_pulsar, s)**2) / 2 / c / (d * 1000 * pc)
+        delay = np.sum(np.cross(position_pulsar, direction)**2) / 2 / c / (d * 1000 * pc)
 
-def annual_orbital_parallax_delay(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, ecl_l, d=1, basis=2):
+    # now, return.
+    return delay
+
+def delay_orbit_annual_parallax(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, ecl_l, d=1, basis=2):
     """ 
     Computes the Roemer timing delay for the Solar System, given a set 
     of ecliptic coordinates.
@@ -73,23 +105,35 @@ def annual_orbital_parallax_delay(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, e
         - time delay [s]
     """
 
-    r_earth = ssb.planet_position_ecliptic(epoch) * au
-    r_pulsar = ov.radius_eccentric_orbit(x, pb, ecc, om, t0, epoch, incl, asc, 
-        ecl_b, ecl_l, basis=basis) * au
-    s = ssb.pulsar_position_ecliptic(ecl_b, ecl_l)
+    # compute terms needed to define radius vector.
+    sini = np.sin(inclination * np.pi / 180)
+    ap = axis_semimajor_projected / sini * c / au
+
+    # now define the position and direction vectors relevant for annual orbital parallax.
+    direction = ssb.pulsar_position_ecliptic(latitude_ecliptic, longitude_ecliptic)
+    position_earth = ssb.planet_position_ecliptic(epoch) * au
+    position_pulsar = ov.radius_orbit_eccentric(time, ap, orbital_period, eccentricity, 
+        argument_periastron, t0, inclination, longitude_node_ascending, 
+        latitude_ecliptic=latitude_ecliptic, longitude_ecliptic=longitude_ecliptic, ecliptic=True)
+ 
+    # now compute cross product.
+    delay = None
 
     if (isinstance(epoch, np.ndarray)):
-        delay = np.zeros(len(epoch))
+        delay = np.zeros(len(time))
 
         for ii in range(len(epoch)):
             delay[ii] = np.sum(np.cross(r_pulsar[:, ii], s) * np.cross(r_earth[:, ii], s))
 
-        return delay / 2 / c / (d * 1000 * pc) 
+        delay = delay / 2 / c / (d * 1000 * pc) 
 
     else:
-        return np.sum(np.cross(r_earth, s) * np.cross(r_pulsar, s)) / 2 / c / (d * 1000 * pc)
+        delay = np.sum(np.cross(r_earth, s) * np.cross(r_pulsar, s)) / 2 / c / (d * 1000 * pc)
 
-def orbital_roemer_delay(dates, orbital_elements, xdot=0, pbdot=0, omdot=0, gamma=0, 
+    # now, return.
+    return delay
+
+def delay_orbit_roemer(dates, orbital_elements, xdot=0, pbdot=0, omdot=0, gamma=0, 
     eps1dot=0, eps2dot=0, m1=0, m2=0, dtheta=0, tolerance=1e-12, binary_model="DD", 
     orbital_phase=False):
     """
@@ -155,9 +199,9 @@ def orbital_roemer_delay(dates, orbital_elements, xdot=0, pbdot=0, omdot=0, gamm
         x, pb, ecc, om, t0 = orbital_elements
 
         # first, compute Keplerian term.
-        ma = mean_anomaly(pb, dates, t0, pbdot=(pbdot * 1e-12)) 
-        ea = ecc_anomaly(ma, ecc, tolerance=tolerance) 
-        om = periastron_argument(om, pb, ecc, dates, t0, pbdot=pbdot, omdot=omdot, 
+        ma = anomaly_mean(pb, dates, t0, pbdot=(pbdot * 1e-12)) 
+        ea = anomaly_eccentric(ma, ecc, tolerance=tolerance) 
+        om = argument_periastron(om, pb, ecc, dates, t0, pbdot=pbdot, omdot=omdot, 
                                    binary_model=binary_model, tolerance=tolerance) 
         se, ce = np.sin(ea * d2r), np.cos(ea * d2r)
         so, co = np.sin(om * d2r), np.cos(om * d2r)
@@ -207,7 +251,7 @@ def orbital_roemer_delay(dates, orbital_elements, xdot=0, pbdot=0, omdot=0, gamm
         else:
             return delay
 
-def shapiro_delay(dates, pb, ecc, om, t0, m2, sini, pbdot=0, omdot=0):
+def delay_orbit_shapiro(dates, pb, ecc, om, t0, m2, sini, pbdot=0, omdot=0):
     """
     Computes the Shapiro timing delay for a pulsar-binary sustem, given the 
     orbital elements and dates. 
@@ -227,10 +271,10 @@ def shapiro_delay(dates, pb, ecc, om, t0, m2, sini, pbdot=0, omdot=0):
         - time delay [s]
     """
 
-    ma = mean_anomaly(pb, dates, t0, pbdot=pbdot) 
-    ea = ecc_anomaly(ma, ecc) 
-    ta = true_anomaly(ea, ecc) 
-    om = periastron_argument(om, pb, ecc, dates, t0, omdot=omdot) 
+    ma = anomaly_mean(pb, dates, t0, pbdot=pbdot) 
+    ea = anomaly_eccentric(ma, ecc) 
+    ta = anomaly_true(ea, ecc) 
+    om = argument_periastron(om, pb, ecc, dates, t0, omdot=omdot) 
     se, ce = np.sin(ea * d2r), np.cos(ea * d2r)
     so, co = np.sin(om * d2r), np.cos(om * d2r)
     delay = -2 * T_sun * m2 * np.log(1 - ecc * ce - sini * ((ce - ecc) * so + se * np.sqrt(1 - ecc**2) * co))
