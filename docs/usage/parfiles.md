@@ -11,7 +11,7 @@ The `Parfile` object currently does not depend on a user-supplied file, and can 
 ```
 
 ## Format of Parfile Attributes
-The basic `Parfile` object mostly consists of attributes that correspond to timing-model parameters used in community-developed timing software, such as `tempo`, `tempo2`, and `PINT`. With the exception of TOA-noise terms, all `Parfile` attributes are Python dictionaries with the following format:
+The `Parfile` object mostly consists of attributes that correspond to timing-model parameters used in community-developed timing software, such as `tempo`, `tempo2`, and `PINT`. With the exception of TOA-noise terms, all `Parfile` attributes are Python dictionaries with the following format:
 
 ``` python
 >>> pmra = getattr(input_parfile, "PMRA")
@@ -19,7 +19,7 @@ The basic `Parfile` object mostly consists of attributes that correspond to timi
 {'value': None, 'flag': None, 'error': None}
 ```
 
-Nearly all fit parameters -- ones subject to least-squares fitting -- are listed in parfiles in "NAME VALUE FLAG ERROR" format; the `Parfile` object organizes these data into dictionaries to make subsequent access and manipulation Pythonic.
+Nearly all fit parameters -- ones subject to least-squares fitting -- are listed in parfiles in "NAME VALUE FLAG ERROR" format; the `Parfile` object organizes these data for all parameters -- whether they are fit or configuration parameters -- into dictionaries to make subsequent access and manipulation Pythonic.
 
 ## Reading Models from a File
 The `Parfile` object also contains several methods for I/O and editing of timing solutions in ASCII format. To read a parfile and overload all relevant attributes in the above `Parfile` object, use the `read()` method:
@@ -65,10 +65,10 @@ The `write()` method will examine all `Parfile` attributes and write those with 
 >>> input_parfile.write(outfile="new.par")
 ```
 
-A new timing solution should appear in your local working area in the "new.par" ASCII file.
+A new timing solution should appear in your local working area as the "new.par" ASCII file.
 
 ## Creating Models from Scratch
-As discussed above, the `Parfile` object can be used in the absence of external timing solutions. An example is the instance where a user would like to simulate timing models and their corresponding TOAs based on custom simulation software. The following script shows how to use the `Parfile` object and its method to create a fake parfile.
+As discussed above, the `Parfile` object can work independently of external information. An example is the instance where a user would like to simulate timing models and their corresponding TOAs based on custom simulation software. The following script demonstrates how the `Parfile` object and its methods can be used to create a fake parfile.
 
 ``` python
 #! /usr/bin/env python
