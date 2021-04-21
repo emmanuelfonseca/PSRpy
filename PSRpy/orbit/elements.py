@@ -14,7 +14,7 @@ def anomaly_mean(time: float, period: float, t0: float, pbdot: float = 0.):
         desired time for evaluation of orbit, in units of MJD
 
     period : float
-        period of the orbit, in units of MJD
+        period of the orbit, in units of days
 
     t0 : float
         epoch of passage through periastron, in units of MJD
