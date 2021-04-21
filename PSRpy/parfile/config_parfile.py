@@ -33,7 +33,7 @@ parameter_list_FD = ["FD{0}".format(num) for num in range(1, n_derivatives_FD)]
 
 # lists for orbital parameters.
 parameter_list_orbit_Kepler = [
-    "A1", "PB", "E", "ECC", "OM", "TO", "EPS1", "EPS2", "TASC"
+    "A1", "PB", "E", "ECC", "OM", "T0", "EPS1", "EPS2", "TASC"
 ]
 
 parameter_list_orbit_PK = ["M2", "SINI", "GAMMA", "DTHETA", "DR"]
