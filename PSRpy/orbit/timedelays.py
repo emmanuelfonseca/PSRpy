@@ -7,7 +7,7 @@ from ..const import au, c, d2r, pc, T_sun
 import numpy as np
 import sys
 
-def delay_orbit_parallax(time: float, axis_semimajor_projected: float, orbital_period: float, 
+def delay_orbit_parallax(time: float, period: float, axis_semimajor_projected: float, 
     eccentricity: float, argument_periastron: float, t0: float, inclination: float, 
     longitude_node_ascending: float, latitude_ecliptic: float, longitude_ecliptic: float):
     """
@@ -19,12 +19,12 @@ def delay_orbit_parallax(time: float, axis_semimajor_projected: float, orbital_p
     time : array_like
         epoch at which to evaulate time delay 
 
+    period : float 
+        period of Keplerian orbit, in units of days
+
     axis_semimajor_projected : float 
         component of Keplerian semimajor axis, projected onto the line of sight, 
         in units of light-seconds
-
-    orbital_period : float 
-        period of Keplerian orbit, in units of days
 
     eccentricity : float
         Keplerian eccentricity for closed orbits (i.e., 0 <= eccentricity < 1)
@@ -48,7 +48,7 @@ def delay_orbit_parallax(time: float, axis_semimajor_projected: float, orbital_p
         ecliptic longitude of binary system
 
     Returns
-    ------
+    -------
     delay : array_like
         time delay due to orbital parallax motion
     """
