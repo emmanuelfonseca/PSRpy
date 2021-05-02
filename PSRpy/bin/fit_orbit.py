@@ -8,7 +8,7 @@ import argparse
 import sys
 
 # define some functions specific to this script.
-def guess_binary_model(mjds, period, period_err):
+def guess_binary_model(mjds, period, period_err, use_ELL1=False):
     """
     Creates an interactive viewer of proposed model to use as a starting guess 
     for fitting the orbital elements from spin-period data.
@@ -30,12 +30,19 @@ def guess_binary_model(mjds, period, period_err):
 
         else:
 
-            a = input('Model parameters (ps, pb, x, ecc, om, t0): ')
-            ps, x, pb, ecc, om, t0 = np.array(a.split(), dtype=float)
+            stdout_string = 'Model parameters (ps, pb, x, ecc, om, t0): '
+            
+            if use_ELL1:
+                stdout_string = 'Model parameters (ps, pb, x, eps1, eps2, t0): '
+
+            a = input(stdout_string)
+            ps, x, pb, ecc1, ecc2, t0 = np.array(a.split(), dtype=float)
             mjds_model = np.linspace(np.min(mjds), np.max(mjds), num=1000)
 
             plt.errorbar(mjds, period, yerr=period_err, fmt='ro')
-            initial_model = doppler_shift_period(mjds_model, ps, pb, x, ecc, om, t0)
+            initial_model = doppler_shift_period(
+                mjds_model, ps, pb, x, ecc1, ecc2, t0, use_ELL1=use_ELL1
+            )
             plt.plot(mjds_model, initial_model, 'b-')
             plt.grid()
             plt.show()
@@ -44,7 +51,7 @@ def guess_binary_model(mjds, period, period_err):
 
             if (repeat == 'n'):
                 keep_looping = False
-                binary_pars[:] = ps, pb, x, ecc, om, t0
+                binary_pars[:] = ps, pb, x, ecc1, ecc2, t0
             else:
                 pass
 
@@ -99,7 +106,7 @@ data = np.loadtxt(input_file, usecols=(0, 1, 2))
 mjds = data[:, 0]
 periods = data[:, 1]
 periods_err = data[:, 2]
-pars = guess_binary_model(mjds, periods, periods_err)
+pars = guess_binary_model(mjds, periods, periods_err, use_ELL1=use_ELL1)
 
 # now, fit the data.
 keep_looping = True
