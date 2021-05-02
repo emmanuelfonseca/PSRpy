@@ -150,12 +150,13 @@ print("Final parameter estimates:")
 print("    * PS = {0:.15f} ms".format(pars[0]))
 print("    * A1 = {0:.10f} lt-s".format(pars[1]))
 print("    * PB = {0:.10f} days".format(pars[2]))
-print("    * T0 = {0:.10f} MJD".format(pars[5]))
 
 if use_ELL1:
+    print("    * TASC = {0:.10f} MJD".format(pars[5]))
     print("    * EPS1 = {0:.10f}".format(pars[3]))
     print("    * EPS2 = {0:.10f} deg".format(pars[4]))
 
 else:
+    print("    * T0 = {0:.10f} MJD".format(pars[5]))
     print("    * E  = {0:.10f}".format(pars[3]))
     print("    * OM = {0:.10f} deg".format(pars[4]))
