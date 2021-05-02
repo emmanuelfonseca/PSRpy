@@ -5,10 +5,10 @@ from ..const import au, c, d2r
 import numpy as np
 import sys
 
-def radius_orbit_eccentric(time: float, axis_semimajor: float, orbital_period: float, 
+def radius_orbit_eccentric(time: float, axis_semimajor: float, period: float, 
     eccentricity: float, argument_periastron: float, t0: float, inclination: float, 
-    longitude_node_ascending: float, latitude_ecliptic: float = None, longitude_ecliptic: float = None, 
-    ecliptic: bool = False):
+    longitude_node_ascending: float, latitude_ecliptic: float = None, 
+    longitude_ecliptic: float = None, ecliptic: bool = False):
     """
     Returns the Cartesian coordinates of the orbital radius vector for a pulsar 
     in an eccentric binary system. The basis is taken to be the ecliptic coordinate system.
@@ -18,10 +18,10 @@ def radius_orbit_eccentric(time: float, axis_semimajor: float, orbital_period: f
     time : array_like
         epoch to evaluate orbital radius vector, in units of MJD
 
-    axis_semimajor_projected : float 
+    axis_semimajor : float 
         Keplerian semimajor axis, in units of AU
 
-    orbital_period : float 
+    period : float 
         period of Keplerian orbit, in units of days
 
     eccentricity : float
@@ -60,7 +60,7 @@ def radius_orbit_eccentric(time: float, axis_semimajor: float, orbital_period: f
     so, co = np.sin(asc_in), np.cos(asc_in)
     si, ci = np.sin(incl_in), np.cos(incl_in)
 
-    ma = anomaly_mean(time, orbital_period, t0)
+    ma = anomaly_mean(time, period, t0)
     ea = anomaly_eccentric(ma, eccentricity)
     ta = anomaly_true(ea, eccentricity)
     tot = np.mod(argument_periastron + ta, 360.) * d2r
