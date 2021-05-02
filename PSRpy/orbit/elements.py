@@ -128,8 +128,8 @@ def anomaly_true(anomaly_eccentric: float, eccentricity: float):
     return ta
 
 def argument_periastron(time: float, initial_periastron: float, period: float, 
-    eccentricity: float, t0: float, pbdot: float = 0, omdot: float = 0, binary_model: str ="DD", 
-    nr_attempts: int = 100, nr_tolerance: float = 1e-12):
+    eccentricity: float, t0: float, pbdot: float = 0, omdot: float = 0, 
+    binary_model: str ="DD", nr_attempts: int = 100, nr_tolerance: float = 1e-12):
     """
     Computes periastron argument at a given point in time (or true anomaly). 
 
