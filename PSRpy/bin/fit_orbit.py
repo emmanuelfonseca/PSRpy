@@ -30,10 +30,10 @@ def guess_binary_model(mjds, period, period_err, use_ELL1=False):
 
         else:
 
-            stdout_string = 'Model parameters (ps, pb, x, ecc, om, t0): '
+            stdout_string = 'Model parameters (ps, x, pb, ecc, om, t0): '
             
             if use_ELL1:
-                stdout_string = 'Model parameters (ps, pb, x, eps1, eps2, t0): '
+                stdout_string = 'Model parameters (ps, x, pb, eps1, eps2, t0): '
 
             a = input(stdout_string)
             ps, x, pb, ecc1, ecc2, t0 = np.array(a.split(), dtype=float)
