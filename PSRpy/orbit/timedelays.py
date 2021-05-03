@@ -2,7 +2,7 @@
 
 from .ssbfuncs import planet_position_ecliptic, pulsar_position_ecliptic
 from .elements import anomaly_mean, anomaly_eccentric, anomaly_true, argument_periastron
-from .orbvectors import radius_eccentric_orbit
+from .orbvectors import radius_orbit_eccentric
 from ..const import au, c, d2r, pc, T_sun
 import numpy as np
 import sys
