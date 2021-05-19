@@ -43,7 +43,7 @@ def velocity_radial(time: float, period: float, axis_semimajor_projected: float,
     # convert some physical quantities to more sensible units.
     # orbital period in seconds; projected semi-major axis in km.
     pb_in = period * 86400
-    x_in = axis_semimajor_projected * c / 1000
+    x_in = axis_semimajor_projected * c.value / 1000
 
     # compute semi-amplitude and trig terms.
     semi_amplitude = 2 * np.pi * x_in / pb_in / np.sqrt(1 - eccentricity**2)
@@ -97,7 +97,7 @@ def velocity_radial_ELL1(time: float, period: float, axis_semimajor_projected: f
     c2p = np.cos(2 * phase_orbit)
 
     # compute and return the radial velocity.
-    amplitude = axis_semimajor_projected * frequency_orbit * c / 1000 / 86400
+    amplitude = axis_semimajor_projected * frequency_orbit * c.value / 1000 / 86400
     velocity_radial = amplitude * (cp + epsilon1 * c2p + epsilon2 * s2p)
 
     return velocity_radial
@@ -156,6 +156,6 @@ def doppler_shift_period(time: float, period_spin: float, period:float,
     v_r *= 1000
 
     # now compute doppler-shifted velocity.
-    period_shifted = period_spin * (1 + v_r / c)
+    period_shifted = period_spin * (1 + v_r / c.value)
 
     return period_shifted 
