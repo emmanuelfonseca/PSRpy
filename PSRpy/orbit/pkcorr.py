@@ -84,7 +84,7 @@ def distGR(xpbd, xpbderr, pb, gal_b, gal_l, mu, muerr, nmc=500, tolerance=1e-12)
     sb = sin(gal_b * u.deg)
 
     # define Kuijken & Gilmore (1989) coefficients.
-    c1 = 1.08e-19 / u.s
+    c1 = -1.08e-19 / u.s
     c2 = 1.25 * u.kpc
     c3 = 0.0324 * u.kpc * u.kpc
     c4 = 0.58 * u.dimensionless_unscaled

@@ -1,51 +1,42 @@
 #! /usr/bin/python
 
-from PSRpy.utils.math import represents_an_int
 from PSRpy.const import c, G, M_sun, T_sun
 from . import config_parfile as config
 from astropy.coordinates import Angle
+from . import printpar
 from re import match
+import PSRpy.utils.math as math
 import matplotlib.pyplot as plt
 import astropy.units as u
 import numpy as np
 import sys
 
 class Parfile(object):
-    """
-    Reads in parfile parameter values, uncertainties and flags as object attributes.
 
-    Inputs
-    ------
+    def __init__(self):
 
-    input_parfile : str
-        pulsar-timing parameter file
+        # instantiate all possible parfile parameters.
+        template_dict = {"value" : None, "flag"  : None, "error" : None}
 
-    efac : float
-        constant factor to multiply across all uncertainties.
-    
-    Notes
-    -----
-    Parameters stored as class attibutes using same parameter-file name (e.g. par.RAJ 
-    stores the 'RAJ' value in 'par' object). Parameter uncertainties are stored as attributes 
-    with parameter name plus an 'err' extension (e.g. par.RAJerr stores the 'RAJ' uncertainty 
-    in the 'par' object).
-    """
+        for current_parameter in config.parameter_list_full:
+            if current_parameter in config.parameter_list_error:
+                setattr(self, current_parameter, {}.copy())
+                
+            else:
+                setattr(self, current_parameter, template_dict.copy())        
 
+        # read input data.
+        #self._read_parfile(input_parfile, efac=efac)
 
-    def __init__(self, input_parfile, efac=1):
-
-        # first, read input data.
-        self._read_parfile(input_parfile, efac=efac)
-
-        # next, organize DMX data if present. 
+        # if present, organize DMX data. 
         self.has_dmx = False 
-        self._get_dmx_data()     
+        #self._get_dmx_data()     
 
         # next, derive parameters based on parfile data.
         # TODO: define internal-use function for this purpose.
 
 
-    def _get_dmx_data(self):
+    def get_dmx_data(self):
         """
         A private function that organizes DMX data into lists if present in input parfile.
 
@@ -138,122 +129,115 @@ class Parfile(object):
         except:
             print("WARNING: no DMX data round in parfile!")
 
-    def _read_parfile(self, input_parfile, efac=1):
-        # preserve order of parameters in parfile.
-        self.fit_parameters = []
-        parorder = []
+    def read(self, input_parfile, efac=1):
+        """
+        Reads in parfile parameter values, uncertainties and flags as object attributes.
 
+        Inputs
+        ------
+
+        input_parfile : str
+            pulsar-timing parameter file
+
+        efac : float
+            constant factor to multiply across all uncertainties.
+    
+        Notes
+        -----
+        Parameters stored as class attibutes using same parameter-file name 
+        (e.g. par.RAJ stores the 'RAJ' value in 'par' object). Parameter uncertainties 
+        are stored as attributes with parameter name plus an 'err' extension 
+        (e.g. par.RAJerr stores the 'RAJ' uncertainty in the 'par' object).
+        """
+
+        # loop over each parfile line and extract data.
         for line in open(input_parfile, "r").readlines():
             lsplit = line.split()
 
-            if (len(lsplit) != 0):
+            if len(lsplit) != 0:
                 # if this line is commented out, then skip.
-                if (lsplit[0] == 'C' or lsplit[0] == '#'):
+                if lsplit[0] == 'C' or lsplit[0] == '#':
                     continue
 
-                # else, loop will continue.
+                # else, loop will continue, grab current dictionary.
                 parname, parvalue = lsplit[0], lsplit[1]
+                current_dict = getattr(self, parname)
 
-                # set the following attributes as strings.
-                if (parname in config.parameter_list_string):
-                    setattr(self, parname, parvalue)
+                # for non-error terms, set the value in the appropriate type.
+                if parname in config.parameter_list_string:
+                    current_dict["value"] = parvalue
 
-                    # the following is for 'RAJ', 'DECJ' that have flags/errors.
-                    if (len(lsplit) > 2):
-                        # check if third element is an integer;
-                        # if not, it is most likely the parameter uncertainty.
-                        # (some ATNF parfiles have this circumstance.)
-                        is_flag = represents_an_int(lsplit[2])
-
-                        if (is_flag):
-                            setattr(self, parname + 'flag', np.int(lsplit[2]))
-
-                            if (np.int(lsplit[2]) == 1):
-                                self.fit_parameters.append(parname)
-
-                        else:
-                            setattr(self, parname + 'err', np.float(lsplit[2]))
-
-                    if (len(lsplit) > 3):
-                        setattr(self, parname + 'err', efac * np.float(lsplit[3]))
-
-                # set these as integers.
-                elif (parname in config.parameter_list_int):
-                    setattr(self, parname, np.int(parvalue))
-
-                # otherwise, if not a JUMP, assume it's a fit parameter 
-                # and store value/errors as floats.
-                elif (parname not in config.parameter_list_error):
-
-                    # switch 'D' with 'e' for exponents.
+                elif parname in config.parameter_list_int:
+                    current_dict["value"] = int(parvalue)
+                
+                elif parname not in config.parameter_list_error:
+                    # for certain TEMPO values in expontential form, 
+                    # switch expnonent character from 'D' to 'e'.
                     if (parvalue.find('D') != -1):
-
                         parvalue = parvalue.replace('D','e')
-                    # DDK model in TEMPO can have SINI = KIN.
-                    if (parvalue == 'KIN'):
-                        setattr(self, parname, parvalue)
+
+                    current_dict["value"] = float(parvalue)
+
+                # before moving on to error terms, suss out flag and uncertainty 
+                # info if present.
+                if parname not in config.parameter_list_error and len(lsplit) > 2:
+
+                    # the following if/else is to treat ATNF parfiles 
+                    # that have no fit flags but do have uncertainties.
+                    is_flag = math.represents_an_int(lsplit[2])
+
+                    if is_flag:
+                        current_dict["flag"] = int(lsplit[2])
+
+                        if len(lsplit) == 4:
+                            # for certain TEMPO values in expontential form, 
+                            # switch expnonent character from 'D' to 'e'.
+                            if (lsplit[3].find('D') != -1):
+                                lsplit[3] = lsplit[3].replace('D','e')
+
+                            current_dict["error"] = float(lsplit[3])
 
                     else:
-                        setattr(self, parname, np.longdouble(parvalue))
+                        # for certain TEMPO values in expontential form, 
+                        # switch expnonent character from 'D' to 'e'.
+                        if (lsplit[2].find('D') != -1):
+                            lsplit[2] = lsplit[2].replace('D','e')
 
-                    # set flag and error attributes if present in parfile.
-                    if (len(lsplit) > 2):
-                        # check if third element is an integer;
-                        # if not, it is most likely the parameter uncertainty.
-                        # (some ATNF parfiles have this circumstance.)
-                        is_flag = represents_an_int(lsplit[2])
-
-                        if (parname != 'START' and parname != 'FINISH' and is_flag):
-                            setattr(self,parname+'flag',np.int(lsplit[2]))
-
-                            if (np.int(lsplit[2]) == 1):
-                                self.fit_parameters.append(parname)
-
-                        elif (parname != 'START' and parname != 'FINISH' and not is_flag):
-                            setattr(self,parname+'err',np.float(lsplit[2]))
-
-                    if (len(lsplit) > 3):
-                        if (lsplit[3].find('D') != -1):
-                            lsplit[3] = lsplit[3].replace('D','e')
-                        setattr(self,parname+'err',np.float(efac*lsplit[3]))
+                        current_dict["flag"] = 0
+                        current_dict["error"] = efac * float(lsplit[2])
 
                 # store JUMP/EFAC/EQUAD as float, but values have different indeces.
-                elif (parname in config.parameter_list_error):
-                    if (parname == 'JUMP'):
-                        parname += '_' + lsplit[2]
-                        self.fit_parameters.append(parname)
-                        setattr(self, parname, np.float(lsplit[3]))
-                        if (len(lsplit) > 4):
-                            setattr(self, parname + 'flag', efac * np.float(lsplit[4]))
-                        if (len(lsplit) > 5):
-                            setattr(self, parname + 'err', efac * np.float(lsplit[5]))
+                elif parname in config.parameter_list_error:
+                    if parname == 'JUMP':
+                        jump_dict = {
+                            "option" : None, "value" : None, "flag" : None, "error" : None
+                        }                        
+
+                        jump_dict["option"] = lsplit[1]
+                        jump_dict["value"] = np.float(lsplit[3])
+
+                        # if fit flag and error are present, stash those.
+                        if len(lsplit) >= 4:
+                            jump_dict["flag"] = int(lsplit[4])
+
+                            if len(lsplit) > 5:
+                                jump_dict["error"] = efac * float(lsplit[5])
                 
-                    # treat TEMPO2 parameter names somewhat differently.
-                    elif (parname is not "JUMP"):
-                        setattr(self, "{0}_{1}".format(parname, lsplit[2]) , np.float(lsplit[3]))
+                        current_dict[lsplit[2]] = jump_dict
 
                     else:
-                        setattr(self, parname, np.float(parvalue))
-                        if (len(lsplit) > 2):
-                            if (np.int(lsplit[2] == 1)):
-                                self.fit_parameters.append(parname)
-                            setattr(self,parname+'flag',np.int(lsplit[2]))
-                        if (len(lsplit) > 3):
-                            setattr(self,parname+'err',np.float(efac*lsplit[3]))
+                        error_dict = {"option" : lsplit[1], "value" : float(lsplit[3])}
+                        current_dict[lsplit[2]] = error_dict
 
-                parorder.append(parname)
-
-            # set array of ordered parameters as object attribute.
-            setattr(self, 'parorder', parorder)
+                # finally, stash loaded dictionary to attribute.
+                setattr(self, parname, current_dict)
 
     def fix(self):
         """
         Fixes parameters by changing flags to 0.
         """
 
-        for parameter in self.parorder:
-            if (hasattr(self, parameter + 'flag')):
-                setattr(self, parameter + 'flag', 0)
+        pass
 
     def rotate(self, new_epoch, fix_T0=False, rotate_binary_to_new_epoch=False):
         """
@@ -400,8 +384,25 @@ class Parfile(object):
                 pbdot = getattr(self, "PBDOT") * 1e-12
                 new_PB = getattr(self, "PB") + (pbdot * diff_binary) / 86400
                 setattr(self, "PB", new_PB)
-            
-    def step(self, uniform_factor=1):
+ 
+    def set(self, parameter: str, new_dict: dict):
+        """
+        Sets desired parfile attributes to supplied values.
+        """
+
+        # first, extract existing dictionary for designated parameter.
+        current_dict = getattr(self, parameter).copy()
+
+        # next, loop over all supplied keys and overload values with 
+        # those supplied in the input dictionary.
+        for current_key in new_dict.keys():
+            new_value = new_dict[current_key]
+            current_dict[current_key] = new_value
+
+        # finally, set the new dictionary.
+        setattr(self, parameter, current_dict)
+           
+    def step(self, uniform_factor: int = 1):
         """
         Randomly steps all parameters with uncertainties in parifle.
         """
@@ -460,11 +461,141 @@ class Parfile(object):
 
                 setattr(self,parameter + 'flag', 0)
 
-    def write(self, outfile="out.par"):
+    def write(self, outfile="out.par", sig_fig_error=2):
         """
         Writes parameter-file Python object to ASCII file.
         """
 
-        from PSRpy.parfile import PrintPar
+        #printpar.PrintPar(self, outfile=outfile)
+        file_lines = []
 
-        PrintPar(self, outfile=outfile)
+        # the following is new.
+        for current_parameter in config.parameter_list_full:
+            current_dict = getattr(self, current_parameter)
+
+            # treat error-adjustment and all other parameters separately.
+            if current_parameter not in config.parameter_list_error:
+                current_value = current_dict["value"]
+                current_line = ""
+                
+                # if attribute is not empty, proceed.
+                if current_value is not None:
+                    current_flag = current_dict["flag"]
+
+                    # if flag is present, determine line to print depending on 
+                    # whether an uncertainty is present or not.
+                    if current_flag is not None:
+                        current_error = current_dict["error"]
+
+                        if current_error is not None:
+                            current_type = "f"
+                            length_value = math.order_of_magnitude(current_dict["error"])
+                            length_value += sig_fig_error
+
+                            # if parameters are usually presented in exponent form, 
+                            # then adjust here as needed.
+                            if current_parameter in config.parameter_list_exponent:
+                                current_type = "e"
+                                length_value = 7
+
+                            length_name = 25 - length_value 
+                            current_line = "{0:<{1}} {2:>.{3}{4}}  {5}  {6}\n".format(
+                                current_parameter, length_name, current_value, 
+                                length_value, current_type, current_flag, current_error
+                            )
+
+                        else:
+                            current_type = "f"
+                            length_value = 10
+                            length_value += sig_fig_error
+                            length_name = 25 - length_value
+
+                            current_line = "{0:<{1}} {2:>.{3}{4}}  {5}\n".format(
+                                current_parameter, length_name, current_value, 
+                                length_value, current_type, current_flag
+                            )
+
+                            
+                    # otherwise, just print parameter name and value
+                    else:
+                        current_type = "f"
+                        length_value = 10
+                        length_value += sig_fig_error
+
+                        # if parameters are usually presented in exponent form, 
+                        # then adjust here as needed.
+                        if current_parameter in config.parameter_list_exponent:
+                            current_type = "e"
+                            length_value = 7
+
+                        length_name = 25 - length_value 
+                        current_line = ""
+                        
+                        if (current_parameter in config.parameter_list_string or
+                            current_parameter in config.parameter_list_int):
+                            current_line = "{0:<{1}} {2:>{3}}\n".format(
+                                current_parameter, length_name, current_value, length_value
+                            )
+
+                        else:
+                            current_line = "{0:<{1}} {2:>.{3}}\n".format(
+                                current_parameter, length_name, current_value, 
+                                length_value, current_type
+                            )
+
+                    file_lines.append(current_line)
+
+                else:
+                    pass
+
+            # now treat noise and JUMP terms.
+            else:
+
+                # if not empty, proceed.
+                if current_dict:
+                    
+                    # loop over dict entries.
+                    for current_key in current_dict.keys():
+                        current_line = ""
+                        current_option = current_dict[current_key]["option"]
+                        current_value = current_dict[current_key]["value"]
+
+                        # if not a JUMP, then print out all entries.
+                        if current_parameter != "JUMP":
+                            current_line = "{0}   {1}   {2}   {3}\n".format(
+                                current_parameter, current_option, current_key, 
+                                current_value
+                            )
+
+                        # else, treat jump as a fit parameter with option.
+                        else:
+                            current_flag = current_dict[current_key]["flag"]
+
+                            if current_flag is not None:
+                                current_error = current_dict[current_key]["error"]
+                                current_line = "{0}   {1}   {2}   {3}   {4}".format(
+                                    current_parameter, current_option, current_key, 
+                                    current_value, current_flag
+                                )
+
+                                if current_error is not None:
+                                    current_line = "{0}   {1}\n".format(
+                                        current_line, current_error
+                                    )
+
+                                else:
+                                    current_line = "{0}\n".format(current_line)
+
+                            else:
+                                current_line = "{0}   {1}   {2}   {3}\n".format(
+                                    current_parameter, current_option, current_key, 
+                                    current_value
+                                )
+                                
+
+                        file_lines.append(current_line)
+
+        # finally, write parfile.
+        fout = open(outfile, "w")
+        fout.writelines(file_lines)
+        fout.close()

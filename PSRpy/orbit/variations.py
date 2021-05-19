@@ -47,7 +47,7 @@ def pbdot_GR(m1, m2, pb, e):
 
     pb_in = np.float(pb)*86400.
     fe = (1 + (73. / 24. * e**2) + (37. / 96. * e**4)) * (1 - e**2)**(-3.5)
-    A  = -192 * pi / 5 * (pb_in / 2 / pi)**(-5./3.) * fe * T_sun**(5./3.)
+    A  = -192 * pi / 5 * (pb_in / 2 / pi)**(-5./3.) * fe * T_sun.value**(5./3.)
     return A*m1*m2*(m1+m2)**(-1./3.)
 
 def r_GR(m2):
@@ -59,7 +59,8 @@ def r_GR(m2):
 
 def s_GR(m1, m2, pb, x):
     """
-    Calculates Shapiro 'shape' parameter, as expected from GR / mass function.
+    Calculates Shapiro 'shape' parameter, as expected from GR / mass function. 
+    Note that this is equal to the sine of the inclination angle.
     """
 
     pb_in = pb * 86400

@@ -1,7 +1,7 @@
 #! /usr/bin/python
 
 from .ssb_data import ssb_planet_positions
-from .elements import ecc_anomaly
+from .elements import anomaly_eccentric
 from ..const import d2r
 import numpy as np
 import sys
@@ -37,7 +37,7 @@ def planet_position_ecliptic(epoch, planet='Earth'):
     omega = (per - asc) * d2r
     mean_anom = (mlt - per) % 360
     #mean_anom *= d2r
-    ecc_anom = ecc_anomaly(mean_anom, ecc) * d2r
+    ecc_anom = anomaly_eccentric(mean_anom, ecc) * d2r
 
     # compute planet's heliocentric coordinates, noting that z_helio = 0.
 

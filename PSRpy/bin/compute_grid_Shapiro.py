@@ -1,9 +1,15 @@
 #! /usr/bin/python
 
+from astropy.coordinates import SkyCoord
 from subprocess import call, Popen, PIPE
+from PSRpy.parfile import Parfile
+from astropy import units as u
 from PSRpy.const import T_sun
 from os.path import isfile
+from copy import deepcopy
 import PSRpy.orbit.variations as orbvar
+import PSRpy.orbit.masses as masses
+import PSRpy.orbit.pkcorr as pkcorr
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
@@ -15,46 +21,183 @@ from matplotlib.font_manager import FontProperties
 font = FontProperties()
 font.set_name('serif')
 
-parser = argparse.ArgumentParser(description='Generate a uniform, 2-D grid of TEMPO2 chi-squared values for different combinations of M2/COSI Shapiro parameters. Note for the future: work in an option to use M2/M1 (or M2/MTOT) combination instead.')
+parser = argparse.ArgumentParser(description=
+    "Generates a uniform grid of TEMPO/TEMPO2 chi-squared values for different " +  
+    "combinations of M2/COSI parameters of the Shapiro time delay. If certain " + 
+    "command-line options are chosen, a three-dimensional grid will be computed, " + 
+    "with the third axis being either the pulsar distance or ascending-node longitude."
+)
 
-parser.add_argument('-f', nargs=1, action='store', dest='parfile', required=True, help='Input TEMPO parfile with M2/SINI parameters.')
-parser.add_argument('-G', action='store_true', dest='useGLS', help='Use GLS fitting in tempo.')
-parser.add_argument('-n', nargs=1, action='store', dest='Ngrid', default=[50], type=int, help='Number of grid points to generate. (Default: 50)')
-parser.add_argument('-p', nargs=1, action='store', dest='pnum', default=[None], type=str, help='TEMPO pulse-number file. (Not required.)')
-parser.add_argument('timfile', nargs=1, action='store', help='Input TEMPO2 .tim file containing TOAs.')
-parser.add_argument('--M2', nargs=2, action='store', metavar=('min', 'max'), dest='M2limits', default=[0.01, 1.], type=float, help='Lower/upper limits of grid along M2 coordinate. (Default: 0.01 to 1)')
-parser.add_argument('--COSI', nargs=2, action='store', metavar=('min', 'max'), dest='COSIlimits', default=[0., 0.99], type=float, help='Lower/upper limits of grid along COSI coordinate. (Default: 0 to 0.99)')
-parser.add_argument('--H3', nargs=2, action='store', metavar=('min', 'max'), dest='H3limits', default=[0.01, 1.0], type=float, help='Lower/upper limits of grid along H3 coordinate. (Default: 0.01 to 1.0)')
-parser.add_argument('--H4', nargs=2, action='store', metavar=('min', 'max'), dest='H4limits', default=[0.01, 1.0], type=float, help='Lower/upper limits of grid along H4 coordinate. (Default: 0.01 to 1.0)')
-parser.add_argument('--STIG', nargs=2, action='store', metavar=('min', 'max'), dest='STIGlimits', default=[0.01, 0.99], type=float, help='Lower/upper limits of grid along STIG coordinate. (Default: 0.01 to 0.99)')
-parser.add_argument('--THETA', nargs=2, action='store', metavar=('min', 'max'), dest='THETAlimits', default=[0., 0.], type=float, help='Lower/upper limits of grid along THETA (kinematic XDOT) coordinate. (Default: 0 to 360 degrees.)')
-parser.add_argument('--M1', nargs=2, action='store', metavar=('min', 'max'), dest='M1limits', default=[0.1, 10.], type=float, help='Lower/upper limits of grid of values for M1. (Default: 0 to 10 solar masses.)')
-parser.add_argument('--MTOT', nargs=2, action='store', metavar=('min', 'max'), dest='MTOTlimits', default=[0.1, 10.], type=float, help='Lower/upper limits of grid of values for MTOT. (Default: 0 to 10 solar masses.)')
-parser.add_argument('--PX', nargs=2, action='store', metavar=('min', 'max'), dest='PXlimits', default=[0., 0.], type=float, help='Lower/upper limits of grid of values for PX. (Default: 0.01 to 10 mas.)')
-parser.add_argument('--XOMDOT', nargs=2, action='store', metavar=('min', 'max'), dest='XOMDOTlimits', default=[0., 0.], type=float, help='Lower/upper limits of grid of values for PX. (Default: 0.01 to 10 mas.)')
-parser.add_argument('--H3STIG', action='store_true', dest='gridH3STIG', help='Grid of the H3/STIG parameters instead. (Requires a solution that has these parameters already set.)')
-parser.add_argument('--M2MTOT', action='store_true', dest='gridM2MTOT', help='Grid of the M2/MTOT parameters instead of M2/COSI.')
-parser.add_argument('--OMDOT', action='store_true', dest='fixOMDOT', help='Compute and fix GR component of OMDOT for each M2/COSI coordinate. (This option only works if OMDOT is set in the input parfile.)')
-parser.add_argument('--PBDOT', action='store_true', dest='fixPBDOT', help='Compute and fix GR component of PBDOT for each M2/COSI coordinate. (This option only works if PBDOT is set in the input parfile.)')
-parser.add_argument('--GAMMA', action='store_true', dest='fixGAMMA', help='Compute and fix GR component of GAMMA for each M2/COSI coordinate. (This option only works if GAMMA is set in the input parfile.)')
-parser.add_argument('--DDGR', action='store_true', dest='gridDDGR', help='Grid over M2/MTOT using the DDGR binary model; currently floats all other DDGR parameters (e.g. XOMDOT, XPBDOT).')
-parser.add_argument('--H3H4', action='store_true', dest='gridH3H4', help='Grid over H3/H4 using the ELL1H binary model.')
-parser.add_argument('--DDS', action='store_true', dest='gridDDS', help='Grid over M2/COSI using the DDS binary model.')
-parser.add_argument('--DDK', action='store_true', dest='gridDDK', help='Grid over M2/COSI/KOM using the DDK binary model.')
-parser.add_argument('--tempo', action='store_true', dest='useTEMPO', help='Perform grid using TEMPO instead.')
-parser.add_argument('--qrfit', action='store_true', dest='useQRFIT', help='Use QR matrix decomposition in TEMPO2 instead of Cholesky method.')
-parser.add_argument('--M1M2', action='store_true', dest='grid_m1m2', help='Uniformly grid over M1/M2.')
-parser.add_argument('--PK2', action='store_true', dest='use_PK2', help='Compute second order post-Keplerian version of OMODT.')
-parser.add_argument('--EXP1', action='store_true', dest='exp_OMDOT', help='Skip TEMPO run if OMDOT is outside of 10-sigma range. Experimental feature.')
-parser.add_argument('--fitM2', action='store_true', dest='fitM2', help='Force M2 to be fit during grid.')
-parser.add_argument('--fitSINI', action='store_true', dest='fitSINI', help='Force SINI to be fit during grid.')
+parser.add_argument(
+    "timfile", action="store", 
+    help="ASCII file containing TOAs that are compatible with TEMPO or TEMPO2."
+)
 
+parser.add_argument(
+    "-f", action='store', dest="parfile", required=True, 
+    help="Input TEMPO or TEMPO2 parfile with M2/SINI parameters."
+)
 
+parser.add_argument(
+    "-G", action="store_true", dest="useGLS", 
+    help="Use GLS fitting in TEMPO."
+)
+
+parser.add_argument(
+    "-n", action="store", dest="Ngrid", default=50, type=int, 
+    help="Number of grid points to generate. (Default: 50)"
+)
+
+parser.add_argument(
+    "-p", action="store", dest="pnum", default=None, type=str, 
+    help="TEMPO pulse-number file."
+)
+
+parser.add_argument(
+    "--M2", nargs=2, action="store", metavar=("min", "max"), 
+    dest="M2limits", default=[0.01, 1.], 
+    type=float, help="Limits of grid along M2 coordinate. (Default: 0.01 to 1)"
+)
+
+parser.add_argument(
+    "--COSI", nargs=2, action="store", metavar=("min", "max"), dest="COSIlimits", 
+    default=[0., 0.99], type=float, 
+    help="Limits of grid along COSI coordinate. (Default: 0 to 0.99)"
+)
+
+parser.add_argument(
+    "--H3", nargs=2, action="store", metavar=("min", "max"), dest="H3limits", 
+    default=[0.01, 1.0], type=float, 
+    help="Limits of grid along H3 coordinate. (Default: 0.01 to 1.0)"
+)
+
+parser.add_argument(
+    "--H4", nargs=2, action="store", metavar=("min", "max"), dest="H4limits", 
+    default=[0.01, 1.0], type=float, 
+    help="Limits of grid along H4 coordinate. (Default: 0.01 to 1.0)"
+)
+
+parser.add_argument(
+    "--STIG", nargs=2, action="store", metavar=("min", "max"), dest="STIGlimits", 
+    default=[0.01, 0.99], type=float, 
+    help="Limits of grid along STIG coordinate. (Default: 0.01 to 0.99)"
+)
+
+parser.add_argument(
+    "--THETA", nargs=2, action="store", metavar=("min", "max"), dest="THETAlimits", 
+    default=[0., 0.], type=float, 
+    help="Limits of grid along THETA (kinematic XDOT) coordinate. (Default: 0 to 360 degrees.)"
+)
+
+parser.add_argument("--M1", nargs=2, action="store", metavar=("min", "max"), dest="M1limits", 
+    default=[0.1, 10.], type=float, 
+    help="Limits of grid along M1 coordinate. (Default: 0 to 10 solar masses.)"
+)
+
+parser.add_argument(
+    "--MTOT", nargs=2, action="store", metavar=("min", "max"), dest="MTOTlimits", 
+    default=[0.1, 10.], type=float, 
+    help="Limits of grid of values for MTOT. (Default: 0 to 10 solar masses.)"
+)
+
+parser.add_argument(
+    "--PX", nargs=2, action="store", metavar=("min", "max"), dest="PXlimits", 
+    default=[0., 0.], type=float, 
+    help="Limits of grid along PX coordinate. (Default: 0.01 to 10 mas.)"
+)
+
+parser.add_argument(
+    "--XOMDOT", nargs=2, action="store", metavar=("min", "max"), dest="XOMDOTlimits", 
+    default=[0., 0.], type=float, 
+    help="Lower/upper limits of grid of values for PX. (Default: 0.01 to 10 mas.)"
+)
+
+parser.add_argument(
+    "--H3STIG", action="store_true", dest="gridH3STIG", 
+    help="Grid over the H3/STIG parameters. (Requires a solution that uses these parameters.)"
+)
+
+parser.add_argument(
+    "--M2MTOT", action="store_true", dest="gridM2MTOT", 
+    help="Grid of the M2/MTOT parameters instead of M2/COSI."
+)
+
+parser.add_argument(
+    "--OMDOT", action="store_true", dest="fixOMDOT", 
+    help="Compute and fix GR component of OMDOT for each M2/COSI coordinate. " + 
+         "(This option only works if OMDOT is set in the input parfile.)"
+)
+
+parser.add_argument("--PBDOT", action="store_true", dest="fixPBDOT", 
+    help="Compute and fix GR component of PBDOT for each M2/COSI coordinate. " + 
+         "(This option only works if PBDOT is set in the input parfile.)'"
+)
+
+parser.add_argument(
+    "--GAMMA", action="store_true", dest="fixGAMMA", 
+    help="Compute and fix GR component of GAMMA for each M2/COSI coordinate. " + 
+         "(This option only works if GAMMA is set in the input parfile.)"
+)
+
+parser.add_argument(
+    "--DDGR", action="store_true", dest="gridDDGR", 
+    help="Grid over M2/MTOT using the DDGR binary model; " + 
+         "currently floats all other DDGR parameters (e.g. XOMDOT, XPBDOT)."
+)
+
+parser.add_argument(
+    "--H3H4", action="store_true", dest="gridH3H4", 
+    help="Grid over H3/H4 using the ELL1H binary model."
+)
+
+parser.add_argument(
+    "--DDS", action="store_true", dest="gridDDS", 
+    help="Grid over M2/COSI using the DDS binary model."
+)
+
+parser.add_argument(
+    "--DDK", action="store_true", dest="gridDDK", 
+    help="Grid over M2/COSI/KOM using the DDK binary model."
+)
+
+parser.add_argument(
+    "--tempo", action="store_true", dest="useTEMPO", 
+    help="Perform grid using TEMPO instead."
+)
+
+parser.add_argument(
+    "--qrfit", action="store_true", dest="useQRFIT", 
+    help="Use QR matrix decomposition in TEMPO2 instead of Cholesky method."
+)
+
+parser.add_argument(
+    "--M1M2", action="store_true", dest="grid_m1m2", 
+    help='Uniformly grid over M1/M2.'
+)
+
+parser.add_argument("--PK2", action="store_true", dest="use_PK2", 
+    help="Compute second order post-Keplerian version of OMODT."
+)
+
+parser.add_argument(
+    "--EXP1", action="store_true", dest="exp_OMDOT", 
+    help="Skip TEMPO run if OMDOT is outside of 30-sigma range. Experimental feature."
+)
+
+parser.add_argument(
+    "--fitM2", action="store_true", dest="fitM2", help="Force M2 to be fit during grid."
+)
+
+parser.add_argument(
+    "--fitSINI", action="store_true", dest="fitSINI", help="Force SINI to be fit during grid."
+)
+
+# collect and retrieve command-line arguments.
 args = parser.parse_args()
-intim = (args.timfile)[0]
-inpar = (args.parfile)[0]
-inpnum = (args.pnum)[0]
-Ngrid = (args.Ngrid)[0]
+intim = args.timfile
+inpar = args.parfile
+inpnum = args.pnum
+Ngrid = args.Ngrid
 m2_lo, m2_hi = args.M2limits
 cosi_lo, cosi_hi = args.COSIlimits
 h3_lo, h3_hi = args.H3limits
@@ -85,243 +228,290 @@ use_PK2 = args.use_PK2
 expOMDOT = args.exp_OMDOT
 fitM2 = args.fitM2
 fitSINI = args.fitSINI
+
+# decide which type of grid to generate.
 grid_m2cosi = True
+x = None
+y = None
+z = None
+x_label = ""
+y_label = ""
+z_label = ""
 
-if (gridDDGR or gridM2MTOT):
+if any([gridDDGR, gridM2MTOT, gridM1M2, gridH3STIG, gridH3H4]):
     grid_m2cosi = False
 
-tolerance = 30.
+    if any([gridDDGR, gridM2MTOT]):
+        x_label = "MTOT"
+        y_label = "M2"
+        x = np.linspace(mtot_lo, mtot_hi, num=Ngrid)
+        y = np.linspace(m2_lo, m2_hi, num=Ngrid)
+    
+    elif gridM1M2:
+        x_label = "M1"
+        y_label = "M2"
+        x = np.linspace(m1_lo, m1_hi, num=Ngrid)
+        y = np.linspace(m2_lo, m2_hi, num=Ngrid)
 
-if (any([px_lo, px_hi]) != 0.):
-    fixPX = True
+    elif gridH3STIG:
+        x_label = "STIG"
+        y_label = "H3"
+        x = np.linspace(stig_lo, stig_hi, num=Ngrid)
+        y = np.linspace(h3_lo, h3_hi, num=Ngrid)
 
-if (any([theta_lo, theta_hi]) != 0.):
-    fixXDOT = True
+    elif gridH3H4:
+        x_label = "H4"
+        y_label = "H3"
+        x = np.linspace(h4_lo, h4_hi, num=Ngrid)
+        y = np.linspace(h3_lo, h3_hi, num=Ngrid)
+        
+    else:
+        sys.exit("ERROR: can't recognize grid and determine axes!")
 
-if (any([xomdot_lo, xomdot_hi]) != 0.):
-    fixXOMDOT = True
-
-if (gridM1M2 or gridH3STIG or gridH3H4):
-    grid_m2cosi = False
-
-# select binary MSP here and set grid params here.
-theta = np.linspace(theta_lo, theta_hi, num=Ngrid)
-cosi = np.linspace(cosi_lo, cosi_hi, num=Ngrid)
-m1 = np.linspace(m1_lo, m1_hi, num=Ngrid)
-m2 = np.linspace(m2_lo, m2_hi, num=Ngrid)
-mtot = np.linspace(mtot_lo, mtot_hi, num=Ngrid)
-h3 = np.linspace(h3_lo, h3_hi, num=Ngrid)
-h4 = np.linspace(h4_lo, h4_hi, num=Ngrid)
-stig = np.linspace(stig_lo, stig_hi, num=Ngrid)
-px = np.linspace(px_lo, px_hi, num=Ngrid)
-xomdot = np.linspace(xomdot_lo, xomdot_hi, num=Ngrid)
-
-# should not have to edit things from now on.
-# but, you never know...
-
-# set grid/tempo parameters.
-chisq = np.zeros((Ngrid, Ngrid))
-chisq_3D = np.zeros((Ngrid, Ngrid, Ngrid))
-sini_bestfit, m2_bestfit, mtot_bestfit = 0, 0, 0
-h3_bestfit, h4_bestfit, stig_bestfit = 0., 0., 0.
-Pb, A1, E = 0, 0, 0
-xdot, pbdot, omdot, gamma = 0., 0., 0., 0.
-pmlambda, pmbeta = 0., 0.
-pmra, pmdec = 0., 0.
-pm, px_bestfit = 0., 0.
-gal_l, gal_b = 0., 0.
-nfree, nharm = 0, 0
-omdoterr = 0.
-obj = ""
-binary_model = ""
-
-# get important parameters from TEMPO2 parfile.
-for line in open(inpar, "r").read().splitlines():
-    line = line.rstrip()
-    if (re.search('PSR ', line)):
-        line = line.split()
-        obj = line[1]
-    elif (re.search('PSRJ', line)):
-        line = line.split()
-        obj = line[1]
-    elif (re.search('PMRA ', line)):
-        line = line.split()
-        pmra = np.float(line[1])
-    elif (re.search('PMDEC ', line)):
-        line = line.split()
-        pmdec = np.float(line[1])
-    elif (re.search('PMLAMBDA ', line)):
-        line = line.split()
-        pmlambda = np.float(line[1])
-    elif (re.search('PMBETA ', line)):
-        line = line.split()
-        pmbeta = np.float(line[1])
-    elif (re.search('H3 ', line)):
-        line = line.split()
-        h3_bestfit   = np.float(line[1])
-    elif (re.search('H4 ', line)):
-        line = line.split()
-        h4_bestfit   = np.float(line[1])
-    elif (re.search('M2 ', line)):
-        line = line.split()
-        m2_bestfit   = np.float(line[1])
-    elif (re.search('STIG ', line)):
-        line = line.split()
-        stig_bestfit = np.float(line[1])
-    elif (re.search('SINI ', line)):
-        line = line.split()
-        sini_bestfit = np.float(line[1])
-    elif (re.search('MTOT ', line)):
-        line = line.split()
-        mtot_bestfit = np.float(line[1])
-    elif (re.search('PB ', line)):
-        line = line.split()
-        Pb = np.float(line[1])
-    elif (re.search('A1 ', line)):
-        line = line.split()
-        A1 = np.float(line[1])
-    elif (re.search('ECC ', line)):
-        line = line.split()
-        E = np.float(line[1])
-    elif (line[0] == 'E' and line[1] == ' '):
-        line = line.split()
-        E = np.float(line[1])
-    elif (re.search('OMDOT ', line)):
-        line = line.split()
-        omdot = np.float(line[1])
-        if (len(line) > 2):
-            omdoterr = np.float(line[3])
-    elif (re.search('GAMMA ', line)):
-        line = line.split()
-        gamma = np.float(line[1])
-    elif (re.search('XDOT ', line)):
-        line = line.split()
-        xdot = np.float(line[1])
-    elif (re.search('BINARY ', line)):
-        binary_model = line.split()[1]
-
-massfunc = A1**3 * (2 * np.pi / Pb / 86400.)**2 / T_sun.value
-
-if (pmra !=0 and pmdec != 0):
-    pm = np.sqrt(pmra**2 + pmdec**2)
 else:
-    pm = np.sqrt(pmlambda**2 + pmbeta**2)
+    x_label = "COSI"
+    y_label = "M2"
+    x = np.linspace(cosi_lo, cosi_hi, num=Ngrid)
+    y = np.linspace(m2_lo, m2_hi, num=Ngrid)
 
+
+# determine if desired grid is over three coordinates.
+grid_3D = False
+
+if any([px_lo, px_hi]) != 0.:
+    fixPX = True
+    grid_3D = True
+    z_label = "PX"
+    z = np.linspace(px_lo, px_hi, num=Ngrid)
+
+elif any([theta_lo, theta_hi]) != 0.:
+    fixXDOT = True
+    grid_3D = True
+    z_label = "THETA"
+    z = np.linspace(theta_lo, theta_hi, num=Ngrid)
+
+elif any([xomdot_lo, xomdot_hi]) != 0.:
+    fixXOMDOT = True
+    grid_3D = True
+    z_label = "XOMDOT"
+    z = np.linspace(xomdot_lo, xomdot_hi, num=Ngrid)
+
+### set grid  parameters.
+chisq = None 
+
+if grid_3D:
+    chisq = np.zeros((Ngrid, Ngrid, Ngrid))
+
+else:
+    chisq = np.zeros((Ngrid, Ngrid))
+
+### read in supplied parfile into PSRpy parfile object and extract info.
+input_par = Parfile()
+input_par.read(inpar)
+obj = ""
+num_degrees_of_freedom = 0
+
+if input_par.PSR["value"] is not None:
+    obj = input_par.PSR["value"]
+
+elif input_par.PSRJ["value"] is not None:
+    obj = input_par.PSRJ["value"]
+
+else:
+    sys.exit("ERROR: parfile must have PSR or PSRJ set!")
+
+# extract Keplerian elements, compute mass function.
+eccentricity = input_par.E["value"]
+orbital_period = input_par.PB["value"]
+semimajor_axis = input_par.A1["value"]
+
+if eccentricity is None:
+    if input_par.EPS1["value"] is not None and input_par.EPS2["value"] is not None:
+        eccentricity = np.sqrt(input_par.EPS1["value"]**2 + input_par.EPS2["value"]**2)
+ 
+    else:
+        sys.exit("ERROR: input parfile seems to have incomplete binary model?")
+
+mass_func = masses.mass_function(orbital_period, semimajor_axis)
+
+# extract position info and compute converted Galactic coordinates.
+longitude = None
+latitude = None
+units = None
+frame = ""
+
+if input_par.RAJ["value"] is not None and input_par.DECJ["value"] is not None:
+    latitude = input_par.DECJ["value"]
+    longitude = input_par.RAJ["value"]
+    units = (u.hourangle, u.deg)
+    frame = "icrs"
+
+elif input_par.LAMBDA["value"] is not None and input_par.BETA["value"] is not None:
+    latitude = input_par.BETA["value"]
+    longitude = input_par.LAMBDA["value"]
+    units = (u.deg, u.deg)
+    frame = "barycentrictrueecliptic"
+
+else:
+    sys.exit("ERROR: astrometric coordinates are missing or inconsistent!")
+
+coords = SkyCoord(longitude, latitude, frame=frame, unit=units)
+
+# if available, compute total magnitude of proper motion.
+pm = 0.
+
+if input_par.PMRA["value"] is not None and input_par.PMDEC["value"] is not None:
+    pm = np.sqrt(input_par.PMRA["value"]**2 + input_par.PMDEC["value"]**2)
+
+elif input_par.PMLAMBDA["value"] is not None and input_par.PMBETA["value"] is not None:
+    pm = np.sqrt(input_par.PMLAMBDA["value"]**2 + input_par.PMBETA["value"]**2)
+
+else:
+    print("WARNING: both proper motion terms are not in parfile!")
+    print("... neglecting all calculations that involve these terms ...")
+
+### determine structure of form for TEMPO or TEMPO2 call, depending
+### on inputs supplied at the command line.
 com1, com2 = [], []
 chisq_bestfit = 0.
 chisq_min = 1e6
 
-if (useTEMPO):
+# if TEMPO is desired, determine the call.
+if useTEMPO:
+
+    # if GLS is desired, add the "-G" flag.
     if useGLS:
-        if (inpnum is not None):
+
+        # if pulse numbers are to be used, add the flag and pulse-number file.
+        if inpnum is not None:
             com1 = ['tempo', '-ni', inpnum, '-G', '-f', inpar, intim]
             com2 = ['tempo', '-ni', inpnum, '-G', '-f', './dummygrid.par', intim]
             com3 = ['tempo', '-ni', inpnum, '-G', '-f', './dummygrid2.par', intim]
+        
+        # otherwise, ignore pulse numbers.
         else:
             com1 = ['tempo', '-G', '-f', inpar, intim]
             com2 = ['tempo', '-G', '-f', './dummygrid.par', intim]
             com3 = ['tempo', '-G', '-f', './dummygrid2.par', intim]
+
+    # same as above if-statement, but neglecting GLS fit option.
     else:
-        if (inpnum is not None):
+
+        if inpnum is not None:
             com1 = ['tempo', '-ni', inpnum, '-f', inpar, intim]
             com2 = ['tempo', '-ni', inpnum, '-f', './dummygrid.par', intim]
             com3 = ['tempo', '-ni', inpnum, '-f', './dummygrid2.par', intim]
+
         else:
             com1 = ['tempo', '-f', inpar, intim]
             com2 = ['tempo', '-f', './dummygrid.par', intim]
             com3 = ['tempo', '-f', './dummygrid2.par', intim]
+
+# if TEMPO2 is instead desired, suss out the call.
 else:
+
+    # if QR composition is desired, add the right flag.
     if useQRFIT:
         com1 = ['tempo2', '-qrfit', '-newpar', '-f', './dummygrid.par', intim]
         com2 = ['tempo2', '-qrfit', '-newpar', '-f', './dummygrid2.par', intim]
+
     else:
         com1 = ['tempo2', '-newpar', '-f', './dummygrid.par', intim]
         com2 = ['tempo2', '-newpar', '-f', './dummygrid2.par', intim]
 
+# before performing computations, print relevant info to terminal.
 print("Getting Shapiro-delay grid...")
 
 if useGLS:
     print("    * using GLS...")
 
 if fixOMDOT:
-    if (omdot != 0.):
-        print("    * fixing OMDOT to GR value (best-fit OMDOT = {0:.5f} deg/yr)".format(omdot))
+    print("    * fixing OMDOT to GR value", end="")
+
+    # check if input parfile has an OMDOT.
+    if input_par.OMDOT["value"] is not None:
+        print("(best-fit OMDOT = {0:.5f} deg/yr)".format(input_par.OMDOT["value"]))
+
     else:
-        print("    * !!! No OMDOT in original parfile; proceed with caution !!!")
-    #   sys.exit("Ooops! It does not look like OMDOT is set in this parfile.")
+        print()
 
 if fixPBDOT:
-    if (hasattr(par, 'PBDOT') and fixPX):
-        print("    * fixing PBDOT to GR+kinematic value (best-fit PBDOT = {0:.5f} * 1e-12)".format(pbdot))
-    elif hasattr(par, 'PBDOT'):
-        print("    * fixing PBDOT to GR value (best-fit PBDOT = {0:.5f} * 1e-12)".format(pbdot))
+
+    # check if input parfile has an PBDOT.
+    if input_par.PBDOT["value"] is not None and fixPX:
+        print("    * fixing PBDOT to GR+kinematic value (best-fit PBDOT = {0:.5f} * 1e-12)".format(
+                input_par.PBDOT["value"]
+            )
+        )
+
+    elif hasattr(input_par, "PBDOT"):
+        print("    * fixing PBDOT to GR value (best-fit PBDOT = {0:.5f} * 1e-12)".format(
+                input_par.PBDOT
+            )
+        )
+
     else:
-        sys.exit("Ooops! It does not look like PBDOT is set in this parfile.")
+        sys.exit("ERROR: no PBDOT in original parfile; must add an PBDOT line in parfile!")
 
 if fixGAMMA:
-    if (gamma != 0.):
-        print("    * fixing GAMMA to GR value (best-fit GAMMA = {0:.5f} ms)".format(gamma * 1000.))
+
+    # check if input parfile has a GAMMA.
+    if hasattr(input_par, "GAMMA"):
+        print("    * fixing GAMMA to GR value (best-fit GAMMA = {0:.5f} ms)".format(
+                input_par.GAMMA * 1000.
+            )
+        )
+
     else:
-        sys.exit("Ooops! It does not look like GAMMA is set in this parfile.")
+        sys.exit("ERROR: no GAMMA in original parfile; must add an GAMMA line in parfile!")
 
 if fixXDOT:
-    print("Fixing XDOT (best-fit = {0:.5f})...".format(xdot))
-    cosi_bestfit = np.sqrt(1 - sini_bestfit**2)
-    coti_bestfit = cosi_bestfit / sini_bestfit
-    xdot_max = pm * A1 * coti_bestfit * 1e12
-    sinTHETA = xdot / xdot_max
+    print("Fixing XDOT (best-fit XDOT = {0:.5f}) * 1e-12".format(input_par.XDOT))
+    cosi_bestfit = np.sqrt(1 - input_par.SINI**2)
+    coti_bestfit = cosi_bestfit / input_par.SINI
+    xdot_max = pm * input_par.A1 * coti_bestfit * 1e12
+    sinTHETA = input_par.XDOT / xdot_max
     print("    * predicted max. XDOT = {0:.5f}...".format(xdot_max))
     print("    * predicted THETA     = {0:.5f}...".format(np.arcsin(sinTHETA) * 180 / np.pi))
 
+# if desired, print info on orthometric parameters.
 if gridH3H4:
     print("    * orthometric (approximate) timing solution...")
-    print("        - best-fit H3: {0:.3f} microsec".format(h3_bestfit * 1e6))
-    print("        - best-fit H4: {0:.3f} microsec".format(h4_bestfit * 1e6))
+    print("        - best-fit H3: {0:.3f} microsec".format(input_par.H3 * 1e6))
+    print("        - best-fit H4: {0:.3f} microsec".format(input_par.H4 * 1e6))
 
 if gridH3STIG:
     print("    * orthometric (full) timing solution...")
-    print("        - best-fit H3:   {0:.3f} microsec".format(h3_bestfit * 1e6))
+    print("        - best-fit H3:   {0:.3f} microsec".format(input_par.H3 * 1e6))
+
+    # the inclination parameter is called different names in TEMPO and TEMPO2, 
+    # so treat this calculation carefully.
+    stig_bestfit = 0.
+
+    if hasattr(input_par, "STIG"):
+        stig_bestfit = input_par.STIG
+
+    elif hasattr(input_par, "VARSIGMA"):
+        stig_bestfit = input_par.VARSIGM
+
     print("        - best-fit STIG: {0:.3f}".format(stig_bestfit))
     sini_bestfit = 2 * stig_bestfit / (1 + stig_bestfit**2)
-    m2_bestfit = h3_bestfit / stig_bestfit**3 / T_sun
+    m2_bestfit = input_par.H3 / stig_bestfit**3 / T_sun.value
     print("    * derived M2:    {0:.3f} solar masses".format(m2_bestfit))
     print("    * derived SINI:  {0:.3f}".format(sini_bestfit))
 
-if (gridDDGR):
-    print("Fixing MTOT (best-fit = {0:.5f})...".format(mtot_bestfit))
+if gridDDGR:
+    print("Fixing MTOT (best-fit = {0:.5f})...".format(input_par.MTOT))
 
+# define variables to be re-defined at each grid point if applicable
+# to the desired grid type.
 c2, c3 = 0, 0
-mtot_parfile = 0.
-x, y = 0, 0
-
-# figure out which grid to make, select appropriate axes.
-if grid_m2cosi:
-    x = cosi
-    y = m2
-
-elif gridH3H4:
-    x = h4
-    y = h3
-
-elif gridH3STIG:
-    x = stig
-    y = h3
-
-elif (gridDDGR or gridM2MTOT):
-    x = mtot
-    y = m2
-
-elif gridM1M2:
-    x = m1
-    y = m2
-
-else:
-    sys.exit("It's unclear which grid you want to generate!")
-
+new_par = deepcopy(input_par)
 gamma_new = 0.
-pbdot_new = 0.
+pbdot_elem = 0.
+pbdot_full = 0.
 xdot_new = 0.
-omdot_new = 0.
+omdot_elem = 0.
 omdot_full = 0.
 sini_elem = 0.
 cosi_elem = 0.
@@ -331,16 +521,17 @@ m2_elem = 0.
 mtot_elem = 0.
 count_3D = 0
 
-# now perform loops over the axes.
+### now perform loops over the axes for grid calculation.
+# first, loop over x coordinate.
 for x_elem in x:
 
-    # declare appropriate variables, depending on desired grid.
+    # define appropriate variables, depending on desired grid.
     if grid_m2cosi:
         cosi_elem = x_elem
         sini_elem = np.sqrt(1 - cosi_elem**2)
         shapmax_elem = -np.log(1 - sini_elem)
 
-    elif (gridDDGR or gridM2MTOT):
+    elif gridDDGR or gridM2MTOT:
         mtot_elem = x_elem
 
     elif gridM1M2:
@@ -348,256 +539,145 @@ for x_elem in x:
 
     c1 = 0
 
-    # loop over y coordinate.
+    # now loop over y coordinate.
     for y_elem in y:
 
-        if (grid_m2cosi or gridDDGR or gridM1M2 or gridM2MTOT):
+        # if grid uses "traditional" parameters, compute M1/M2/MTOT/SINI values.
+        if any([grid_m2cosi, gridDDGR, gridM1M2, gridM2MTOT]):
             m2_elem = y_elem
 
             if grid_m2cosi:
-                m1_elem = np.sqrt((m2_elem * sini_elem)**3 / massfunc) - m2_elem
+                new_par.set("M2", {"value": m2_elem, "flag": 0})
+                new_par.set("SINI", {"value": sini_elem, "flag": 0})
+                m1_elem = np.sqrt((m2_elem * sini_elem)**3 / mass_func) - m2_elem
+                mtot_elem = m1_elem + m2_elem
 
-            elif (gridDDGR or gridM1M2 or gridM2MTOT):
+            elif any([gridDDGR, gridM1M2, gridM2MTOT]):
                 if (gridDDGR or gridM2MTOT):
                     m1_elem = mtot_elem - m2_elem
+                
+                else: 
+                    mtot_elem = m1_elem + m2_elem
 
-                sini_elem = (massfunc * (m1_elem + m2_elem)**2)**(1./3.) / m2_elem
+                sini_elem = (mass_func * (m1_elem + m2_elem)**2)**(1./3.) / m2_elem
 
-        if (fixXDOT or fixPX):
+        # if grid is instead "orthometric", compute H3/H4/STIG values.
+        elif any([gridH3H4, gridH3STIG]):
             pass
+
+        # if desired, compute corresponding post-Keplerian parameters here.
+        # the following is for OMDOT.
+        if any([fixOMDOT, fixXOMDOT, fixXDOT]):
+            omdot_elem = orbvar.omdot_GR(
+                m1_elem, m2_elem, orbital_period, eccentricity, use_PK2=use_PK2
+            )
+
+            if fixOMDOT:
+                new_par.set("OMDOT", {"value": omdot_elem, "flag": 0})
+
+        # the following is for GAMMA.
+        if fixGAMMA:
+            pass
+
+        # the following is for PBDOT.
+        if fixPBDOT:
+            pbdot_elem = orbvar.pbdot_GR(
+                m1_elem, m2_elem, orbital_period, eccentricity
+            )
+
+            # if not gridding over PX/DIST, then just compute GR term and set.
+            if not fixPX:
+                new_par.set("PBDOT", {"value": pbdot_elem, "flag": 0})
+
+        # if grid is 3D, do not yet update terminal info on percent completed.
+        if fixXDOT or fixPX:
+            pass
+
+        # otherwise, print percent completed to terminal screen for a 2D grid.
         else:
-            perc = 100.*(c3+1)/Ngrid**2
-            sys.stdout.write('\rPercent completed: {0:.3f}% (min. chisq = {1:.3f})'.format(perc, chisq_min))
+            perc = 100. * (c3 + 1.) / Ngrid**2
+            sys.stdout.write('\rPercent completed: {0:.3f}% (min. chisq = {1:.3f})'.format(
+                    perc, chisq_min
+                )
+            )
             sys.stdout.flush()
 
-        fout = open('./dummygrid.par','w')
-
-        # create new parfile with fixed M2/SINI (or M2/MTOT) values.
-        for line in open(inpar, "r").read().splitlines():
-            line = line.rstrip()
-
-            # if DDGR solution, grid over different, DDGR-specific parameters.
-            if gridDDGR:
-
-                # uniform grid in M2/COSI? Or M1/M2? 
-                #if grid_m2cosi:
-                #    mtot_parfile = np.sqrt((m2_elem * sini_elem)**3 / massfunc)
-                #else:
-                #    mtot_parfile = m1_elem + m2_elem
-
-                if (re.search('M2 ', line)):
-                    line = line.split()
-                    fout.write("{0}               {1:.12f}  0\n".format(line[0], m2_elem))
-                elif (re.search('MTOT ', line)):
-                    line = line.split()
-                    fout.write("{0}               {1:.12f}  0\n".format(line[0], mtot_elem))
-                elif ('GAMMA ' in line):
-                    pass
-                elif ('SINI ' in line):
-                    pass
-                elif ('OMDOT ' in line):
-                    pass
-                elif ('DR ' in line):
-                    pass
-                elif ('DTHETA ' in line):
-                    pass
-                elif ('XPBDOT' not in line and 'PBDOT' in line):
-                    pass
-                else:
-                    fout.write(line+"\n")
-
-            elif (gridDDS):
-                if (re.search('M2 ', line)):
-                    line = line.split()
-                    fout.write("{0}               {1:.12f}  0\n".format(line[0], m2_elem))
-                elif (re.search('SHAPMAX ', line)):
-                    line = line.split()
-                    fout.write("{0}               {1:.12f}  0\n".format(line[0], shapmax_elem))
-                else:
-                    fout.write(line+"\n")
-
-            elif gridH3H4:
-                if (re.search('H3 ', line)):
-                    line = line.split()
-                    fout.write("{0}       {1:.12f}  0\n".format(line[0], y_elem * 1e-6))
-                elif (re.search('H4 ', line)):
-                    line = line.split()
-                    fout.write("{0}       {1:.12f}  0\n".format(line[0], x_elem * 1e-6))
-                else:
-                    fout.write(line+"\n")
-
-            # else, if orthometric solution, grid over appropriate orthometric parameters.
-            elif gridH3STIG:
-
-                h3_elem = y_elem * 1e-6
-                stig_elem = x_elem
-                m2_elem = h3_elem / stig_elem**3 / T_sun
-                sini_elem = 2 * stig_elem / (1 + stig_elem**2)
-                m1_elem = np.sqrt((m2_elem * sini_elem)**3 / massfunc) - m2_elem
-                elem = line.split()
-
-                if (re.search('H3 ', line)):
-                    line = line.split()
-                    fout.write("{0}       {1:.12f}  0\n".format(line[0], y_elem * 1e-6))
-                elif (re.search('VARSIGMA ', line)):
-                    line = line.split()
-                    fout.write("{0}       {1:.8f}  0\n".format(line[0], x_elem))
-                elif (re.search('STIG ', line)):
-                    line = line.split()
-                    fout.write("{0}       {1:.8f}  0\n".format(line[0], x_elem))
-                elif (re.search('OMDOT',line)):
-                    if (fixOMDOT and fixXDOT):
-                        m1_elem = np.sqrt((m2_elem * sini_elem)**3 / massfunc) - m2_elem
-                        #omdot_new = ddgr.omdot_GR(m1_elem, m2_elem, Pb, E)
-                    elif fixOMDOT:
-                        pass
-                        #omdot_new = ddgr.omdot_GR(m1_elem, m2_elem, Pb, E)
-                        #fout.write("{0}               {1:.12f}  0\n".format(elem[0], omdot_new))
-                    else:
-                        fout.write(line+"\n")
-                elif (re.search('PBDOT',line)):
-                    if (fixPBDOT and fixPX):
-                        #pbdot_new = ddgr.pbdot_GR(m1_elem, m2_elem, Pb, E)
-                        pass
-                    elif fixPBDOT:
-                        m1_elem = np.sqrt((m2_elem * sini_elem)**3 / massfunc) - m2_elem
-                        #pbdot_new = ddgr.pbdot_GR(m1_elem, m2_elem, Pb, E)
-                        #fout.write("{0}               {1:.8f}  0\n".format(elem[0], pbdot_new * 1e12))
-                    else:
-                        fout.write(line+"\n")
-                elif (re.search('GAMMA',line)):
-                    if fixGAMMA:
-                        #gamma_new = ddgr.gamma_GR(m1_elem, m2_elem, Pb, E)   
-                        pass
-                        #fout.write("{0}               {1:.12f}  0\n".format(elem[0], gamma_new))
-                    else:
-                        fout.write(line+"\n")
-                elif (re.search('XDOT',line)):
-                    if fixXDOT:
-                        pass
-                elif (re.search('PX',line)):
-                    if fixPX:
-                        pass
-                    else:
-                        fout.write(line+"\n")
-                else:
-                    fout.write(line+"\n")
-
-            # otherwise, assumes DD/ELL1/BT/DDK parameters.
-            else:
-
-                if (re.search('SINI ',line)):
-                    elem = line.split()
-                    fout.write("{0}               {1:.8f}  0\n".format('SINI', sini_elem))
-                elif (re.search('KOM ', line) and fixXDOT):
-                    pass
-                elif (re.search('KOM ', line) and gridDDK):
-                    pass
-                elif (re.search('KOM ', line)):
-                    fout.write("{0}\n".format(line))
-                elif (re.search('KIN ',line)):
-                    incl_in = np.arccos(cosi_elem) * 180 / np.pi
-                    fout.write("{0}               {1:.8f}  0\n".format('KIN',incl_in))
-                elif (re.search('M2 ',line) and not re.search('DM2', line)):
-                    if fitM2:
-                        fout.write(line)
-                    else:
-                        elem = line.split()
-                        fout.write("{0}                 {1:.8f}  0\n".format(elem[0], m2_elem))
-                elif (re.search('OMDOT ',line)):
-                    if ((fixOMDOT and fixXOMDOT) or (fixOMDOT and fixXDOT)):
-                        omdot_new = orbvar.omdot_GR(m1_elem, m2_elem, Pb, E, use_PK2=use_PK2)
-                    elif fixOMDOT:
-                        omdot_new = orbvar.omdot_GR(m1_elem, m2_elem, Pb, E, use_PK2=use_PK2)
-                        fout.write("{0}               {1:.12f}  0\n".format('OMDOT', omdot_new))
-                    else:
-                        fout.write(line+"\n")
-                #elif (re.search('PBDOT',line)):
-                #    if (fixPBDOT and fixPX):
-                #        pbdot_new = ddgr.pbdot_GR(m1_elem, m2_elem, Pb, E)
-                #    elif fixPBDOT:
-                #        pbdot_new = ddgr.pbdot_GR(m1_elem, m2_elem, Pb, E)
-                #        fout.write("{0}               {1:.8f}  0\n".format('PBDOT', pbdot_new * 1e12))
-                #    else:
-                #        fout.write(line+"\n")
-                elif (re.search('GAMMA',line)):
-                    if fixGAMMA:
-                        gamma_new = orbvar.gamma_GR(m1_elem, m2_elem, Pb, E).value
-                        fout.write("{0}               {1:.12f}  0\n".format('GAMMA', gamma_new))
-                    else:
-                        fout.write(line+"\n")
-                elif (re.search('XDOT',line)):
-                    if (fixXDOT):
-                        # if 3-D grid is wanted, then omit the 'XDOT' line from parfile.
-                        # this is because you need to set KIN/KOM params instead.
-                        pass
-                    else:
-                        fout.write(line+"\n")
-                elif (re.search('PX',line)):
-                    if fixPX:
-                        pass
-                    else:
-                        fout.write(line+"\n")
-                else:
-                    fout.write(line+"\n")
-
-        # if 3D grid is wanted, then loop through dummy parfile injecting different values of KOM or PX.
-        # otherwise, close filehandle and get chi-squared values.
-        #if (omdot == 0. and fixOMDOT):
-        #    omdot_new = ddgr.omdot_GR(m1_elem, m2_elem, Pb, E)
-        #    fout.write("{0}             {1:.12f}  0\n".format("OMDOT", omdot_new))
-        fout.close()
-
-        if (gridDDK or fixXDOT):
-
+        # if grid is 3D, loop over third dimension.
+        # first consider if grid over Kopeikin terms is desired.
+        if z is not None:
             c4 = 0
 
-            for theta_elem in theta:
-
-                perc = 100. * (count_3D + 1)/Ngrid**3
-                sys.stdout.write('\rPercent completed: {0:.3f}% (min. chisq = {1:.3f})'.format(perc, chisq_min))
+            for z_elem in z:
+                perc = 100. * (count_3D + 1) / Ngrid**3
+                sys.stdout.write(
+                        "\rPercent completed: {0:.3f}% (min. chisq = {1:.3f})".format(
+                        perc, chisq_min
+                    )
+                )
                 sys.stdout.flush()
                 c3 += 1
-                call(['cp', 'dummygrid.par', 'dummygrid2.par'])
-                fout2 = open('./dummygrid2.par', 'a')
 
-                if (fixXDOT and not gridDDK):
-                    coti_elem = np.sqrt(1 - sini_elem**2) / sini_elem
-                    xdot_full = A1 * pm * coti_elem * np.sin(theta_elem * np.pi / 180) / 1000. / 3600. 
-                    xdot_full *= (np.pi / 180)
-                    xdot_full /= (365.25 * 86400)
-                    omdot_sec = pm / sini_elem * np.cos(theta_elem * np.pi / 180) / 1000. / 3600.
-                    omdot_full = omdot_new + omdot_sec
+                if fixXDOT and not gridDDK:
+                    pass
+                    #coti_elem = np.sqrt(1 - sini_elem**2) / sini_elem
+                    #xdot_full = A1 * pm * coti_elem * np.sin(theta_elem * np.pi / 180) / 1000. / 3600. 
+                    #xdot_full *= (np.pi / 180)
+                    #xdot_full /= (365.25 * 86400)
+                    #omdot_sec = pm / sini_elem * np.cos(theta_elem * np.pi / 180) / 1000. / 3600.
+                    #omdot_full = omdot_elem + omdot_sec
 
                     # write out XDOT in correct units if using TEMPO or TEMPO2.
-                    if useTEMPO:
-                        fout2.write("{0}                 {1:.8f}   0\n".format('XDOT', xdot_full * 1e12))
-                    else:
-                        fout2.write("{0}                 {1:.8e}   0\n".format('XDOT', xdot_full))
+                    #if useTEMPO:
+                    #    fout2.write("{0}                 {1:.8f}   0\n".format('XDOT', xdot_full * 1e12))
+                    #else:
+                    #    fout2.write("{0}                 {1:.8e}   0\n".format('XDOT', xdot_full))
 
                     # if model is not ELL1, write out OMDOT.
-                    if (binary_model != "ELL1"):
-                        fout2.write("{0}                {1:.8f}   0\n".format('OMDOT', omdot_full))
+                    #if (binary_model != "ELL1"):
+                    #    fout2.write("{0}                {1:.8f}   0\n".format('OMDOT', omdot_full))
 
                 # else, assume DDK model and set KOM.
-                else:
-                    fout2.write("{0}                 {1:.8f}   0\n".format('KOM', theta_elem))
+                elif gridDDK:
+                    pass
+                    #fout2.write("{0}                 {1:.8f}   0\n".format('KOM', theta_elem))
 
-                fout2.close()
+                # if grid is over PX/DIST, compute relevant terms and set.
+                elif fixPX:
+                    new_par.set("PX", {"value": z_elem, "flag": 0})
+                    
+                    if fixPBDOT:
+                        dop_comps, err = pkcorr.doppler(
+                            1 / z_elem, 0.1, coords.galactic.b.deg, coords.galactic.l.deg, 
+                            pm, 0.1
+                        )
+                        pbdot_full = pbdot_elem + np.sum(dop_comps) * orbital_period * 86400
+                        new_par.set("PBDOT", {"value": pbdot_full * 1e12, "flag": 0})
 
-                # now run tempo on new/dummy parfile, extract numbers.
+                # if grid is over XOMDOT, compute relevant terms and set.
+                elif fixXOMDOT:
+                    omdot_full = omdot_elem + z_elem * 1e-6
+                    new_par.set("OMDOT", {"value": omdot_full, "flag": 0})
+
+                # write temporary parfile to disk.
+                new_par.write(outfile="dummygrid2.par")
+
+                # finally, determine best-fit chisq at current grid point.
                 if useTEMPO:
-
                     p3 = Popen(com3, stdout=PIPE)
                     out3, err3 = p3.communicate()
+
                     try:
-                        m = re.search(r'Chisqr/nfree\W+(\d+\.\d+)\W+(\d+)\W+(\d+\.\d+)', out3.decode('utf-8'))
-                        chisq_3D[c1, c2, c4] = np.float(m.group(3)) * np.float(m.group(2))
-                        if (chisq_3D[c1, c2, c4] < chisq_min):
-                            chisq_min = chisq_3D[c1, c2, c4]
+                        m = re.search(
+                            r'Chisqr/nfree\W+(\d+\.\d+)\W+(\d+)\W+(\d+\.\d+)', str(out3)
+                        )
+                        chisq[c1,c2,c4] = float(m.group(3)) * int(m.group(2))
+
+                        if (chisq[c1, c2, c4] < chisq_min):
+                            chisq_min = chisq[c1, c2, c4]
+                            num_degrees_of_freedom = int(m.group(2))
 
                     except:
-                        chisq_3D[c1,c2,c4] = 1e6
+                        chisq[c1,c2,c4] = 1e6
 
                     c4 += 1
 
@@ -607,369 +687,138 @@ for x_elem in x:
                     out3, err3 = p3.communicate()
                     line = out3.split()
                     if (c1 == 0 and c2 == 0 and c4 == 0):
-                        nfree = np.float(line[2])
-                    chisq_3D[c1,c2, c4] = np.float(line[1]) * np.float(line[2])
+                        num_degrees_of_freedom = float(line[2])
+                    chisq[c1,c2, c4] = np.float(line[1]) * np.float(line[2])
                     c4 += 1
 
-                count_3D += 1 
+                count_3D += 1
 
-        elif (fixPX or fixXOMDOT):
-
-            c4 = 0
-            z = 0
-
-            if fixPX:
-                z = px
-            elif fixXOMDOT:
-                z = xomdot
-
-            for z_elem in z:
-
-                perc = 100. * (count_3D + 1) / Ngrid**3
-                sys.stdout.write('\rPercent completed: {0:.3f}% (min. chisq = {1:.3f})'.format(perc, chisq_min))
-                sys.stdout.flush()
-                c3 += 1
-                call(['cp', 'dummygrid.par', 'dummygrid2.par'])
-
-                if fixPX:
-
-                    fout2 = open('./dummygrid2.par', 'a')
-                    fout2.write("{0}                 {1:.8f}   0\n".format('PX', z_elem))
-                    
-                    if (fixPBDOT):
-                        #dop_comps, err = doppler(1 / z_elem, 0.2, gal_b, gal_l, pm, 0.1)
-                        pbdot_full = pbdot_new #+ np.sum(dop_comps) * Pb * 86400
-                        fout2.write("{0}                 {1:.8f}   0\n".format('PBDOT', pbdot_full * 1e12))
-
-                    fout2.close()
-
-                elif fixXOMDOT:
-
-                    omdot_full = omdot_new + z_elem * 1e-6
-
-                    fout2 = open('./dummygrid2.par', 'a')
-                    fout2.write("{0}                 {1:.8f}   0\n".format('OMDOT', omdot_full))
-                    fout2.close()
-
-
-                # now run tempo on new/dummy parfile, extract numbers.
-
-                if (fixPBDOT and expOMDOT and np.fabs(pbdot_full * 1e12 - pbdot) / pbdoterr > tolerance):
-                    
-                    chisq_3D[c1, c2, c4] = 1e6
-                    count_3D += 1
-                    c4 += 1
-
-                elif (fixGAMMA and expOMDOT and np.fabs(gamma_new - gamma) / gammaerr > tolerance):
-
-                    chisq_3D[c1, c2, c4] = 1e6
-                    count_3D += 1
-                    c4 += 1
-
-                elif (fixOMDOT and expOMDOT and np.fabs(omdot_full - omdot) / omdoterr > tolerance):
-
-                    chisq_3D[c1, c2, c4] = 1e6
-                    count_3D += 1
-                    c4 += 1
-                else:
-
-                    if useTEMPO:
-    
-                        p3 = Popen(com3, stdout=PIPE)
-                        out3, err3 = p3.communicate()
-                        try:
-                            m = re.search(r'Chisqr/nfree\W+(\d+\.\d+)\W+(\d+)\W+(\d+\.\d+)', out3)
-                            chisq_3D[c1,c2,c4] = np.float(m.group(3)) * np.float(m.group(2))
-                            if (chisq_3D[c1, c2, c4] < chisq_min):
-                                chisq_min = chisq_3D[c1, c2, c4]
-                        except:
-                            chisq_3D[c1,c2,c4] = 1e6
-    
-                        c4 += 1
-    
-                    else:
-                        call(com2,stdout=PIPE)
-                        p3 = Popen(['grep','CHI2R','./new.par'],stdout=PIPE)
-                        out3, err3 = p3.communicate()
-                        line = out3.split()
-                        if (c1 == 0 and c2 == 0 and c4 == 0):
-                            nfree = np.float(line[2])
-                        chisq_3D[c1,c2, c4] = np.float(line[1]) * np.float(line[2])
-                        c4 += 1
-
-                    count_3D += 1
-
+        # if instead a 2D grid is desired, just proceed to calling tempo/tempo2.
         else:
-            fout.close()
+            new_par.write(outfile="dummygrid.par")
 
-            # now run tempo on new/dummy parfile, extract numbers.
-            if (useTEMPO):
+            # if desired, use tempo for chisq estimation.
+            if useTEMPO:
+                p = Popen(com2, stdout=PIPE)
+                out, err = p.communicate()
 
-                if (gridDDGR and (mtot_elem - m2_elem) < 0.):
-                    chisq[c1,c2] = 1e6
-                    c1 += 1
-                    c3 += 1
-                    continue
+                try:
+                    m = re.search('Chisqr/nfree\W+(\d+\.\d+)\W+(\d+)\W+(\d+\.\d+)', str(out))
+                    chisq[c1, c2] = float(m.group(3)) * float(m.group(2))
+                    nfree = int(m.group(2))
 
-                else:
-                     
-                    if (fixOMDOT and expOMDOT and np.fabs(omdot - omdot_new) / omdoterr > tolerance):
-                        chisq[c1, c2] = 1e6
-
-                    elif (fixGAMMA and expOMDOT and np.fabs(gamma - gamma_new) / gammaerr > tolerance):
-                        chisq[c1, c2] = 1e6
-
-                    else: 
-
-                        p = Popen(com2, stdout=PIPE)
-                        out, err = p.communicate()
-        
-                        try:
-                            m = re.search('Chisqr/nfree\W+(\d+\.\d+)\W+(\d+)\W+(\d+\.\d+)', str(out))
-                            chisq[c1,c2] = np.float(m.group(3)) * np.float(m.group(2))
-                            if (chisq[c1, c2] < chisq_min):
-                                chisq_min = chisq[c1, c2]
-                        except:
-                            chisq[c1,c2] = 1e6
-            else:
-
-                if (fixOMDOT and expOMDOT and np.fabs(omdot - omdot_new) / omdoterr > tolerance):
-                    chisq[c1, c2] = 1e6
-
-                elif (fixGAMMA and expOMDOT and np.fabs(gamma - gamma_new) / gammaerr > tolerance):
-                    chisq[c1, c2] = 1e6
-
-                else:
-                    #call(com1, stdout=PIPE)
-                    p2 = Popen(com1, stdout=PIPE)
-                    out2, err2 = p2.communicate()
-                    p3 = Popen(['grep','CHI2R','./new.par'],stdout=PIPE)
-                    out3, err3 = p3.communicate()
-                    line = out3.split()
-                    if (c1 == 0 and c2 == 0):
-                        nfree = np.float(line[2])
-                    chisq[c1,c2] = np.float(line[1]) * np.float(line[2])
+                    # if current chisq is lowest yet, record.
                     if (chisq[c1, c2] < chisq_min):
                         chisq_min = chisq[c1, c2]
+
+                except:
+                    chisq[c1,c2] = 1e6
+
+            else:
+                #call(com1, stdout=PIPE)
+                p2 = Popen(com1, stdout=PIPE)
+                out2, err2 = p2.communicate()
+                p3 = Popen(['grep','CHI2R','./new.par'],stdout=PIPE)
+                out3, err3 = p3.communicate()
+                line = out3.split()
+                if (c1 == 0 and c2 == 0):
+                    nfree = np.float(line[2])
+                chisq[c1,c2] = float(line[1]) * float(line[2])
+                if (chisq[c1, c2] < chisq_min):
+                    chisq_min = chisq[c1, c2]
+
+        # update indices for y coordinate, bookkeeping.
         c1 += 1
         c3 += 1
+
+    # update index for x coordinate.
     c2 += 1
 
 print()
 
-# create x/y grids for contour plots.
+# before writing data to disk, create a plot or two.
 outf = ''
 
-if fixXDOT:
-    outf = 'SDgrid.'+obj+'.rs.fixXDOT.pickle'
-    
-    delta_chisq3D = chisq_3D - np.min(chisq_3D)
+if z is not None:
+    delta_chisq3D = chisq - np.min(chisq)
     pdf3D = 0.5 * np.exp(-0.5 * delta_chisq3D)
+    pdf2D_xy = np.zeros((Ngrid, Ngrid))
+    pdf2D_xz = np.zeros((Ngrid, Ngrid))
+    pdf2D_yz = np.zeros((Ngrid, Ngrid))
+    outf_contour_xy = ""
+    outf_contour_xz = ""
+    outf_contour_yz = ""
 
-    pdf2D_m2cosi = np.zeros((Ngrid, Ngrid))
-    pdf2D_h3stig = np.zeros((Ngrid, Ngrid))
-    pdf2D_thetacosi = np.zeros((Ngrid, Ngrid))
-    pdf2D_thetastig = np.zeros((Ngrid, Ngrid))
+    if fixOMDOT:
+        outf_contour_xy = "rs.{0}.{1}{2}.fixOMDOT.png".format(obj, x_label, y_label)
+        outf_contour_xz = "rs.{0}.{1}{2}.fixOMDOT.png".format(obj, x_label, z_label)
+        outf_contour_yz = "rs.{0}.{1}{2}.fixOMDOT.png".format(obj, y_label, z_label)
+    else:
+        outf_contour_xy = "rs.{0}.{1}{2}.png".format(obj, x_label, y_label)
+        outf_contour_xz = "rs.{0}.{1}{2}.png".format(obj, x_label, z_label)
+        outf_contour_yz = "rs.{0}.{1}{2}.png".format(obj, y_label, z_label)
 
     # loop over two dimensions and collapse to get 2D PDFs.
     for ii in range(Ngrid):
         for jj in range(Ngrid):
-            if grid_m2cosi:
-                pdf2D_m2cosi[jj, ii] = np.sum(pdf3D[jj, ii, :])
-                pdf2D_thetacosi[jj, ii] = np.sum(pdf3D[:, ii, jj])
-            elif gridH3STIG:
-                pdf2D_h3stig[jj, ii] = np.sum(pdf3D[jj, ii, :])
-                pdf2D_thetastig[jj, ii] = np.sum(pdf3D[:, ii, jj])
+                pdf2D_xy[jj, ii] = np.sum(pdf3D[jj, ii, :])
+                pdf2D_xz[jj, ii] = np.sum(pdf3D[jj, :, ii])
+                pdf2D_yz[jj, ii] = np.sum(pdf3D[:, jj, ii])
 
-    if grid_m2cosi:
-        pdf2D_m2cosi = pdf2D_m2cosi / np.max(pdf2D_m2cosi) * 0.5
-        pdf2D_thetacosi = pdf2D_thetacosi / np.max(pdf2D_thetacosi) * 0.5
+    plt.pcolormesh(x, y, pdf2D_xy, vmin=0, vmax=np.max(pdf2D_xy), cmap="Blues", shading="auto")
+    plt.colorbar()
+    plt.xlabel(x_label, fontproperties=font, fontsize=15)
+    plt.ylabel(y_label, fontproperties=font, fontsize=15)
+    plt.savefig(outf_contour_xy, fmt="png")
+    plt.clf()
 
-        plt.figure(1)
-        plt.pcolormesh(cosi, m2, pdf2D_m2cosi, vmin=0, vmax=np.max(pdf2D_m2cosi))
-        plt.savefig('rs.'+obj+'.THETA.m2cosi.png', format='png')
-        plt.figure(2)
-        plt.pcolormesh(cosi, theta, pdf2D_thetacosi, vmin=0, vmax=np.max(pdf2D_thetacosi))
-        plt.savefig('rs.'+obj+'.THETA.thetacosi.png', format='png')
+    plt.pcolormesh(x, z, pdf2D_xz, vmin=0, vmax=np.max(pdf2D_xz), cmap="Blues", shading="auto")
+    plt.colorbar()
+    plt.xlabel(x_label, fontproperties=font, fontsize=15)
+    plt.ylabel(z_label, fontproperties=font, fontsize=15)
+    plt.savefig(outf_contour_xz, fmt="png")
+    plt.clf()
 
-    elif gridH3STIG:
-        pdf2D_h3stig = pdf2D_h3stig / np.max(pdf2D_h3stig) * 0.5
-        pdf2D_thetastig = pdf2D_thetastig / np.max(pdf2D_thetastig) * 0.5
-
-        plt.figure(1)
-        plt.pcolormesh(stig, h3, pdf2D_h3stig, vmin=0, vmax=np.max(pdf2D_h3stig))
-        plt.xlabel(r'$\varsigma$', fontproperties=font, fontsize=15)
-        plt.ylabel(r'$h_3$ ($\mu$s)', fontproperties=font, fontsize=15)
-        plt.savefig('ortho.'+obj+'.fixTHETA.h3stig.png', format='png')
-        plt.figure(2)
-        plt.pcolormesh(stig, theta, pdf2D_thetastig, vmin=0, vmax=np.max(pdf2D_thetastig))
-        plt.xlabel(r'$\varsigma$', fontproperties=font, fontsize=15)
-        plt.ylabel(r'$\Theta$ (deg)', fontproperties=font, fontsize=15)
-        plt.savefig('ortho.'+obj+'.fixTHETA.thetastig.png', format='png')
-
-elif fixPX:
-
-    outf = 'SDgrid.'+obj+'.rs.fixPX.pickle'
-    
-    delta_chisq3D = chisq_3D - np.min(chisq_3D)
-    pdf3D = 0.5 * np.exp(-0.5 * delta_chisq3D)
-
-    pdf2D_m1m2 = np.zeros((Ngrid, Ngrid))
-    pdf2D_m2cosi = np.zeros((Ngrid, Ngrid))
-    pdf2D_h3stig = np.zeros((Ngrid, Ngrid))
-    pdf2D_pxm1 = np.zeros((Ngrid, Ngrid))
-    pdf2D_pxcosi = np.zeros((Ngrid, Ngrid))
-    pdf2D_pxstig = np.zeros((Ngrid, Ngrid))
-
-    # loop over two dimensions and collapse to get 2D PDFs.
-    for ii in range(Ngrid):
-        for jj in range(Ngrid):
-            if grid_m2cosi:
-                pdf2D_m2cosi[jj, ii] = np.sum(pdf3D[jj, ii, :])
-                pdf2D_pxcosi[jj, ii] = np.sum(pdf3D[:, ii, jj])
-            elif gridM1M2:
-                pdf2D_m1m2[jj, ii] = np.sum(pdf3D[jj, ii, :])
-                pdf2D_pxm1[jj, ii] = np.sum(pdf3D[:, ii, jj])
-            elif gridH3STIG:
-                pdf2D_h3stig[jj, ii] = np.sum(pdf3D[jj, ii, :])
-                pdf2D_pxstig[jj, ii] = np.sum(pdf3D[:, ii, jj])
-
-    if grid_m2cosi:
-        pdf2D_m2cosi = pdf2D_m2cosi / np.max(pdf2D_m2cosi) * 0.5
-        pdf2D_pxcosi = pdf2D_pxcosi / np.max(pdf2D_pxcosi) * 0.5
-
-        plt.figure(1)
-        plt.pcolormesh(cosi, m2, pdf2D_m2cosi, vmin=0, vmax=np.max(pdf2D_m2cosi))
-        plt.savefig('rs.'+obj+'.fixPX.m2cosi.png', format='png')
-        plt.xlabel(r'$\cos i$', fontproperties=font, fontsize=15)
-        plt.ylabel(r'Companion Mass (M$_\odot$)', fontproperties=font, fontsize=15)
-        plt.figure(2)
-        plt.pcolormesh(cosi, px, pdf2D_pxcosi, vmin=0, vmax=np.max(pdf2D_pxcosi))
-        plt.xlabel(r'$\cos i$', fontproperties=font, fontsize=15)
-        plt.ylabel(r'$\varpi$ (mas)', fontproperties=font, fontsize=15)
-        plt.savefig('rs.'+obj+'.fixPX.pxcosi.png', format='png')
-
-    elif gridM1M2:
-        pdf2D_m1m2 = pdf2D_m1m2 / np.max(pdf2D_m1m2) * 0.5
-        pdf2D_pxm1 = pdf2D_pxm1 / np.max(pdf2D_pxm1) * 0.5
-
-        plt.figure(1)
-        plt.pcolormesh(m1, m2, pdf2D_m1m2, vmin=0, vmax=np.max(pdf2D_m1m2))
-        plt.savefig('rs.'+obj+'.fixPX.m1m2.png', format='png')
-        plt.xlabel(r'Pulsar Mass (M$_\odot$)', fontproperties=font, fontsize=15)
-        plt.ylabel(r'Companion Mass (M$_\odot$)', fontproperties=font, fontsize=15)
-        plt.figure(2)
-        plt.pcolormesh(m1, px, pdf2D_pxm1, vmin=0, vmax=np.max(pdf2D_pxm1))
-        plt.xlabel(r'Pulsar Mass (M$_\odot$)', fontproperties=font, fontsize=15)
-        plt.ylabel(r'$\varpi$ (mas)', fontproperties=font, fontsize=15)
-        plt.savefig('rs.'+obj+'.fixPX.pxm1.png', format='png')
-
-
-    elif gridH3STIG:
-        pdf2D_h3stig = pdf2D_h3stig / np.max(pdf2D_h3stig) * 0.5
-        pdf2D_pxstig = pdf2D_pxstig / np.max(pdf2D_pxstig) * 0.5
-
-        plt.figure(1)
-        plt.pcolormesh(stig, h3, pdf2D_h3stig, vmin=0, vmax=np.max(pdf2D_h3stig))
-        plt.xlabel(r'$\varsigma$', fontproperties=font, fontsize=15)
-        plt.ylabel(r'$h_3$ ($\mu$s)', fontproperties=font, fontsize=15)
-        plt.savefig('ortho.'+obj+'.fixPX.h3stig.png', format='png')
-        plt.figure(2)
-        plt.pcolormesh(stig, px, pdf2D_pxstig, vmin=0, vmax=np.max(pdf2D_pxstig))
-        plt.xlabel(r'$\varsigma$', fontproperties=font, fontsize=15)
-        plt.ylabel(r'$\varpi$ (mas)', fontproperties=font, fontsize=15)
-        plt.savefig('ortho.'+obj+'.fixPX.pxstig.png', format='png')
-
+    plt.pcolormesh(y, z, pdf2D_yz, vmin=0, vmax=np.max(pdf2D_yz), cmap="Blues", shading="auto")
+    plt.colorbar()
+    plt.xlabel(y_label, fontproperties=font, fontsize=15)
+    plt.ylabel(z_label, fontproperties=font, fontsize=15)
+    plt.savefig(outf_contour_yz, fmt="png")
 
 else:
     deltachi2 = chisq - np.min(chisq)
     pdf2D = 0.5 * np.exp(-0.5 * deltachi2)
+    outf_contour = ""
 
-    outf_contour = ''
-
-    if (fixOMDOT):
-        outf_contour = 'rs.'+obj+'.fixOMDOT.png'
+    if fixOMDOT:
+        outf_contour = "rs.{0}.fixOMDOT.png".format(obj)
     else:
-        outf_contour = 'rs.'+obj+'.png'
+        outf_contour = "rs.{0}.png".format(obj)
 
     plt.pcolormesh(x, y, pdf2D, vmin=0, vmax=np.max(pdf2D), cmap="Blues", shading="auto")
     plt.colorbar()
+    plt.xlabel(x_label, fontproperties=font, fontsize=15)
+    plt.ylabel(y_label, fontproperties=font, fontsize=15)
+    plt.savefig(outf_contour, fmt="png")
 
-    if gridH3STIG:
-        outf_contour = 'h3stig.'+obj+'.orig.png'
-        plt.xlabel(r'$\varsigma$', fontproperties=font, fontsize=15)
-        plt.ylabel(r'$h_3$ ($\mu$s)', fontproperties=font, fontsize=15)
-    elif gridH3H4:
-        outf_contour = 'h3h4.'+obj+'.orig.png'
-        plt.xlabel(r'$h_4$ ($\mu$s)', fontproperties=font, fontsize=15)
-        plt.ylabel(r'$h_3$ ($\mu$s)', fontproperties=font, fontsize=15)
-    elif gridM1M2:
-        plt.xlabel(r'Pulsar Mass (${\rm M}_\odot$)', fontproperties=font, fontsize=15)
-        plt.ylabel(r'Companion Mass (M$_\odot$)', fontproperties=font, fontsize=15)
-    elif gridM2MTOT:
-        plt.xlabel(r'Total Mass (${\rm M}_\odot$)', fontproperties=font, fontsize=15)
-        plt.ylabel(r'Companion Mass (M$_\odot$)', fontproperties=font, fontsize=15)
-    else:
-        plt.xlabel(r'$\cos i$', fontproperties=font, fontsize=15)
-        plt.ylabel(r'Companion Mass (M$_\odot$)', fontproperties=font, fontsize=15)
-    plt.savefig(outf_contour, format='png')
-
-    outf = ''
-
-    if (fixOMDOT):
-        outf = 'SDgrid.'+obj+'.rs.fixOMDOT.pickle'
-    else:
-        outf = 'SDgrid.'+obj+'.rs.pickle'
-
+# finally, load data dictionary and write to file.
 GridDict = {}
 GridDict['PSR'] = obj
+GridDict['Tsun'] = T_sun
+GridDict['mass_func'] = mass_func
+GridDict['chisq'] = chisq
+GridDict['chisq_bestfit'] = np.min(chisq)
+GridDict[x_label] = x
+GridDict[y_label] = y
 
-if grid_m2cosi:
-    GridDict['COSI'] = cosi
-    GridDict['M2']   = m2
+if z is not None:
+    GridDict[z_label] = z
 
-elif gridH3H4:
-    GridDict['Tsun'] = T_sun
-    GridDict['H4'] = h4
-    GridDict['H3'] = h3
 
-elif gridH3STIG:
-    GridDict['Tsun'] = T_sun
-    GridDict['STIG'] = stig
-    GridDict['H3']   = h3
-
-elif (gridDDGR or gridM2MTOT):
-    GridDict['MTOT'] = mtot
-    GridDict['M2'] = m2
-
-else:
-    GridDict['M1'] = m1
-    GridDict['M2'] = m2
-   
-
-GridDict['massfunc'] = massfunc
-
-if fixXDOT:
-
-    GridDict['THETA'] = theta
-    GridDict['chisq'] = chisq_3D
-
-elif fixPX:
-
-    GridDict['PX'] = px
-    GridDict['PX_bestfit'] = px_bestfit
-    GridDict['chisq'] = chisq_3D
-
-else:
-
-    GridDict['chisq'] = chisq
-
-print(np.min(chisq), np.max(chisq))
-
-GridDict['chisq_bestfit'] = chisq_bestfit
-GridDict['M2_bestfit'] = m2_bestfit
-GridDict['SINI_bestfit'] = sini_bestfit
-GridDict['DOF'] = nfree
+GridDict['M2_bestfit'] = input_par.M2["value"]
+GridDict['PX_bestfit'] = input_par.PX["value"]
+GridDict['SINI_bestfit'] = input_par.SINI["value"]
+GridDict['DOF'] = num_degrees_of_freedom
 
 # save variables for future use.
 pout = open(outf, 'wb')
