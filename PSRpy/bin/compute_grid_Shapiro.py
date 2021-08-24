@@ -324,6 +324,7 @@ else:
 eccentricity = input_par.E["value"]
 orbital_period = input_par.PB["value"]
 semimajor_axis = input_par.A1["value"]
+mass_func = masses.mass_function(orbital_period, semimajor_axis)
 
 if eccentricity is None:
     if input_par.EPS1["value"] is not None and input_par.EPS2["value"] is not None:
@@ -331,8 +332,6 @@ if eccentricity is None:
  
     else:
         sys.exit("ERROR: input parfile seems to have incomplete binary model?")
-
-mass_func = masses.mass_function(orbital_period, semimajor_axis)
 
 # extract position info and compute converted Galactic coordinates.
 longitude = None
@@ -369,6 +368,9 @@ elif input_par.PMLAMBDA["value"] is not None and input_par.PMBETA["value"] is no
 else:
     print("WARNING: both proper motion terms are not in parfile!")
     print("... neglecting all calculations that involve these terms ...")
+
+# before proceeding, convert proper motion to rad/s.
+pm *= (np.pi / 180 / 1000 / 3600 / 365.25 / 86400)
 
 ### determine structure of form for TEMPO or TEMPO2 call, depending
 ### on inputs supplied at the command line.
@@ -466,13 +468,13 @@ if fixGAMMA:
         sys.exit("ERROR: no GAMMA in original parfile; must add an GAMMA line in parfile!")
 
 if fixXDOT:
-    print("Fixing XDOT (best-fit XDOT = {0:.5f}) * 1e-12".format(input_par.XDOT))
-    cosi_bestfit = np.sqrt(1 - input_par.SINI**2)
-    coti_bestfit = cosi_bestfit / input_par.SINI
-    xdot_max = pm * input_par.A1 * coti_bestfit * 1e12
-    sinTHETA = input_par.XDOT / xdot_max
+    print("Fixing XDOT (best-fit XDOT = {0:.5f}) * 1e-12".format(input_par.XDOT["value"]))
+    cosi_bestfit = np.sqrt(1 - input_par.SINI["value"]**2)
+    coti_bestfit = cosi_bestfit / input_par.SINI["value"]
+    xdot_max = pm * semimajor_axis * coti_bestfit * 1e12
+    sinTHETA = input_par.XDOT["value"] / xdot_max
     print("    * predicted max. XDOT = {0:.5f}...".format(xdot_max))
-    print("    * predicted THETA     = {0:.5f}...".format(np.arcsin(sinTHETA) * 180 / np.pi))
+    print("    * predicted THETA     = {0:.5f}...".format(np.arcsin(sinTHETA) * 180 / np.pi % 360))
 
 # if desired, print info on orthometric parameters.
 if gridH3H4:
@@ -548,9 +550,14 @@ for x_elem in x:
 
             if grid_m2cosi:
                 new_par.set("M2", {"value": m2_elem, "flag": 0})
-                new_par.set("SINI", {"value": sini_elem, "flag": 0})
                 m1_elem = np.sqrt((m2_elem * sini_elem)**3 / mass_func) - m2_elem
                 mtot_elem = m1_elem + m2_elem
+
+                if gridDDK:
+                    new_par.set("KIN", {"value": np.arccos(cosi_elem) * 180 / np.pi, "flag": 0})
+
+                else:
+                    new_par.set("SINI", {"value": sini_elem, "flag": 0})
 
             elif any([gridDDGR, gridM1M2, gridM2MTOT]):
                 if (gridDDGR or gridM2MTOT):
@@ -618,23 +625,21 @@ for x_elem in x:
                 c3 += 1
 
                 if fixXDOT and not gridDDK:
-                    pass
-                    #coti_elem = np.sqrt(1 - sini_elem**2) / sini_elem
-                    #xdot_full = A1 * pm * coti_elem * np.sin(theta_elem * np.pi / 180) / 1000. / 3600. 
-                    #xdot_full *= (np.pi / 180)
-                    #xdot_full /= (365.25 * 86400)
-                    #omdot_sec = pm / sini_elem * np.cos(theta_elem * np.pi / 180) / 1000. / 3600.
-                    #omdot_full = omdot_elem + omdot_sec
+                    coti_elem = np.sqrt(1 - sini_elem**2) / sini_elem
+                    xdot_full = semimajor_axis * pm * coti_elem * np.sin(z_elem * np.pi / 180)  
+                    omdot_sec = pm / sini_elem * np.cos(z_elem * np.pi / 180)
+                    omdot_sec *= (180 / np.pi * 86400 * 365.25)
+                    omdot_full = omdot_elem + omdot_sec
 
                     # write out XDOT in correct units if using TEMPO or TEMPO2.
-                    #if useTEMPO:
-                    #    fout2.write("{0}                 {1:.8f}   0\n".format('XDOT', xdot_full * 1e12))
-                    #else:
-                    #    fout2.write("{0}                 {1:.8e}   0\n".format('XDOT', xdot_full))
+                    if useTEMPO:
+                        new_par.set("XDOT", {"value": xdot_full * 1e12, "flag": 0})
+                    else:
+                        new_par.set("XDOT", {"value": xdot_full, "flag": 0})
 
                     # if model is not ELL1, write out OMDOT.
-                    #if (binary_model != "ELL1"):
-                    #    fout2.write("{0}                {1:.8f}   0\n".format('OMDOT', omdot_full))
+                    if (new_par.BINARY["value"] != "ELL1"):
+                        new_par.set("OMDOT", {"value": omdot_full, "flag": 0})
 
                 # else, assume DDK model and set KOM.
                 elif gridDDK:
@@ -735,6 +740,7 @@ for x_elem in x:
     c2 += 1
 
 print()
+print(np.min(chisq), np.max(chisq))
 
 # before writing data to disk, create a plot or two.
 outf = ''
@@ -801,11 +807,11 @@ else:
     plt.ylabel(y_label, fontproperties=font, fontsize=15)
     plt.savefig(outf_contour, fmt="png")
 
-# finally, load data dictionary and write to file.
+### finally, load data dictionary and write to file.
 GridDict = {}
 GridDict['PSR'] = obj
 GridDict['Tsun'] = T_sun
-GridDict['mass_func'] = mass_func
+GridDict['massfunc'] = mass_func
 GridDict['chisq'] = chisq
 GridDict['chisq_bestfit'] = np.min(chisq)
 GridDict[x_label] = x
@@ -814,14 +820,19 @@ GridDict[y_label] = y
 if z is not None:
     GridDict[z_label] = z
 
-
 GridDict['M2_bestfit'] = input_par.M2["value"]
 GridDict['PX_bestfit'] = input_par.PX["value"]
-GridDict['SINI_bestfit'] = input_par.SINI["value"]
 GridDict['DOF'] = num_degrees_of_freedom
 
+# be careful about how to stash the best-fit value of SINI
+if input_par.KIN["value"] is not None:
+    GridDict['SINI_bestfit'] = np.sin(input_par.KIN["value"] * 180 / np.pi)
+
+else:
+    GridDict['SINI_bestfit'] = input_par.SINI["value"]
+
 # save variables for future use.
-pout = open(outf, 'wb')
+pout = open("SDgrid.{0}.pkl".format(obj), 'wb')
 pickle.dump(GridDict, pout)
 pout.close()
 
