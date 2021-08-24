@@ -999,7 +999,7 @@ ax0.get_yaxis().set_visible(False)
 ax1 = plt.subplot(gs[1,0], sharex=ax0)
 ax1.contour(m2_exp, cosi_exp, np.transpose(pdf2D_m2cosi_exp), levels=pdf2D_chisq, colors='r', lw=3)
 ax1.pcolormesh(m2_exp, cosi_exp, np.transpose(pdf2D_m2cosi_exp), cmap='Blues', vmax=np.max(pdf2D_m2cosi_exp), vmin=0.)
-ax1.grid()
+ax1.grid(ls="--")
 ax1.set_ylabel(r'$\cos i$', fontproperties=font, fontsize=15)
 ax1.set_xlabel(r'Companion Mass (M$_{\odot}$)', fontproperties=font, fontsize=15)
 ax1.set_ylim([min(cosi_exp), max(cosi_exp)])
@@ -1022,7 +1022,7 @@ ax3.contour(m1_exp, cosi_exp, np.transpose(pdf2D_m1cosi_exp), levels=pdf2D_chisq
 ax3.pcolormesh(m1_exp, cosi_exp, np.transpose(pdf2D_m1cosi_exp), cmap='Blues', vmax=np.max(pdf2D_m1cosi_exp), vmin=0.)
 ax3.set_xlim([min(m1_exp), max(m1_exp)])
 ax3.set_xlabel(r'Pulsar Mass (M$_{\odot}$)', fontproperties=font, fontsize=15)
-ax3.grid()
+ax3.grid(ls="--")
 ax3.set_ylim([min(cosi_exp), max(cosi_exp)])
 ax3.set_yticklabels([])
 
@@ -1046,7 +1046,7 @@ if ('THETA' in GridDict):
     ax6.set_xlabel(r'$\Omega$ (deg)', fontproperties=font, fontsize=15)
     ax6.set_xlim([min(kom_exp), max(kom_exp)])
     #ax6.set_yticklabels([])
-    ax6.grid()
+    ax6.grid(ls="--")
 
     ax5 = plt.subplot(gs[0,2], sharex=ax6, sharey=ax0)
     ax5.plot(kom_exp, pdf_KOM / np.max(pdf_KOM), 'b-', lw=3)
@@ -1072,7 +1072,7 @@ if (overplotFile is not None):
     ax4.plot(op_M1, op_pdf_M1 / np.max(op_pdf_M1), 'g-', alpha=0.7, lw=3)
 
 plt.figtext(0.8, 0.8, GridDict['PSR'], fontproperties=font, fontsize=15)
-plt.savefig(GridDict['PSR']+'.grids.'+gridtype+'.png',format='png')
+plt.savefig(GridDict['PSR']+'.grids.'+gridtype+'.png', dpi=500, format='png')
 
 # store the basic info for later processing.
 SDpdfs = {}
