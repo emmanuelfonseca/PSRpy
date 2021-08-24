@@ -3,7 +3,6 @@
 from PSRpy.const import c, G, M_sun, T_sun
 from . import config_parfile as config
 from astropy.coordinates import Angle
-from . import printpar
 from re import match
 import PSRpy.utils.math as math
 import matplotlib.pyplot as plt
@@ -466,7 +465,6 @@ class Parfile(object):
         Writes parameter-file Python object to ASCII file.
         """
 
-        #printpar.PrintPar(self, outfile=outfile)
         file_lines = []
 
         # the following is new.
@@ -488,21 +486,28 @@ class Parfile(object):
                         current_error = current_dict["error"]
 
                         if current_error is not None:
-                            current_type = "f"
-                            length_value = math.order_of_magnitude(current_dict["error"])
-                            length_value += sig_fig_error
 
-                            # if parameters are usually presented in exponent form, 
-                            # then adjust here as needed.
-                            if current_parameter in config.parameter_list_exponent:
-                                current_type = "e"
-                                length_value = 7
+                            if current_parameter in ["RAJ", "DECJ"]:
+                                current_line = "{0:<{1}} {2}  {3}  {4}\n".format(
+                                    current_parameter, 20, current_value, current_flag, current_error
+                                )
 
-                            length_name = 25 - length_value 
-                            current_line = "{0:<{1}} {2:>.{3}{4}}  {5}  {6}\n".format(
-                                current_parameter, length_name, current_value, 
-                                length_value, current_type, current_flag, current_error
-                            )
+                            else:
+                                current_type = "f"
+                                length_value = math.order_of_magnitude(current_dict["error"])
+                                length_value += sig_fig_error
+
+                                # if parameters are usually presented in exponent form, 
+                                # then adjust here as needed.
+                                if current_parameter in config.parameter_list_exponent:
+                                    current_type = "e"
+                                    length_value = 7
+
+                                length_name = 25 - length_value 
+                                current_line = "{0:<{1}} {2:>.{3}{4}}  {5}  {6}\n".format(
+                                    current_parameter, length_name, current_value, 
+                                    length_value, current_type, current_flag, current_error
+                                )
 
                         else:
                             current_type = "f"
