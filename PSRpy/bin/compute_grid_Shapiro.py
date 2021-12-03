@@ -503,7 +503,7 @@ if gridH3STIG:
     print("    * derived SINI:  {0:.3f}".format(sini_bestfit))
 
 if gridDDGR:
-    print("Fixing MTOT (best-fit = {0:.5f})...".format(input_par.MTOT))
+    print("Fixing MTOT (best-fit = {0:.5f})...".format(input_par.MTOT["value"]))
 
 # define variables to be re-defined at each grid point if applicable
 # to the desired grid type.
@@ -547,9 +547,10 @@ for x_elem in x:
         # if grid uses "traditional" parameters, compute M1/M2/MTOT/SINI values.
         if any([grid_m2cosi, gridDDGR, gridM1M2, gridM2MTOT]):
             m2_elem = y_elem
+            new_par.set("M2", {"value": m2_elem, "flag": 0})
 
+            # if other parameter is not MTOT, then set the correct parameter.
             if grid_m2cosi:
-                new_par.set("M2", {"value": m2_elem, "flag": 0})
                 m1_elem = np.sqrt((m2_elem * sini_elem)**3 / mass_func) - m2_elem
                 mtot_elem = m1_elem + m2_elem
 
@@ -559,7 +560,10 @@ for x_elem in x:
                 else:
                     new_par.set("SINI", {"value": sini_elem, "flag": 0})
 
+            # otherwise, set MTOT and define other parameters related to it.
             elif any([gridDDGR, gridM1M2, gridM2MTOT]):
+                new_par.set("MTOT", {"value": mtot_elem, "flag": 0})
+
                 if (gridDDGR or gridM2MTOT):
                     m1_elem = mtot_elem - m2_elem
                 
