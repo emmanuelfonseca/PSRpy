@@ -262,82 +262,96 @@ class Parfile(object):
 
         from math import factorial
 
-        old_epoch = self.PEPOCH
+        old_epoch = self.PEPOCH["value"]
         diff_epoch = (new_epoch - old_epoch) * 86400
 
         # if proper-motion terms are set, rotate sky coordinates.
-        if (hasattr(self, 'PMBETA') and hasattr(self, 'PMLAMBDA')):
-            pmbeta = self.PMBETA / 1000 / 3600 / 365.25 / 86400
-            new_beta = self.BETA + pmbeta * diff_epoch
-            setattr(self, 'BETA', new_beta)
+        if self.PMBETA["value"] is not None and self.PMLAMBDA["value"] is not None:
+
+            pmbeta = self.PMBETA["value"] / 1000 / 3600 / 365.25 / 86400
+            new_beta = self.BETA["value"] + pmbeta * diff_epoch
+            self.BETA["value"] = new_beta
             pmlambda = self.PMLAMBDA / 1000 / 3600 / 365.25 / 86400
             new_lambda = self.LAMBDA + pmlambda * diff_epoch
-            setattr(self, 'LAMBDA', new_lambda)
+            self.LAMBDA["value"] = new_lambda
 
         # rotate spin parameters.
         current_spin_location = 0
         for current_spin_1 in config.parameter_list_spin:
-            if hasattr(self, current_spin_1):
-                spin_par_1 = getattr(self, current_spin_1)
+            current_spin_1_dict = getattr(self, current_spin_1)
+
+            if current_spin_1_dict["value"] is not None:
+                spin_par_1 = current_spin_1_dict["value"]
                 idx = 1
 
                 for current_spin_2 in config.parameter_list_spin[current_spin_location+1:]:
+                    current_spin_2_dict = getattr(self, current_spin_2)
                     fac = factorial(idx)
 
-                    if hasattr(self, current_spin_2):
-                        spin_par_2 = getattr(self, current_spin_2)
-                        spin_par_1 += spin_par_2 * diff_epoch**idx / fac
+                    if current_spin_2_dict["value"] is not None:
+                        spin_par_2 = current_spin_2_dict["value"]
+                        spin_par_1 += spin_par_2 * diff_epoch ** idx / fac
                         idx += 1
 
                     else:
                         break
 
-                setattr(self, 'F' + str(spin_num), spin_par)
+                current_spin_1_dict["value"] = spin_par_1
+                setattr(self, current_spin_1, current_spin_1_dict)
             else:
                 break
 
             current_spin_location += 1
 
         # if in binary system, rotate relevant binary parameters.
-        if hasattr(self, 'BINARY'):
-            binary_model = getattr(self, 'BINARY')
+        if self.BINARY["value"] is not None:
+            binary_model = self.BINARY["value"]
             new_Tasc = 0.
-            old_T0 = self.T0
+            old_T0 = self.T0["value"]
             new_T0 = 0.
 
-            if (binary_model in model_list_binary_circular):
+            if binary_model in config.model_list_binary_circular:
                 pass
 
-            elif (binary_model in model_list_binary_eccentric):
+            elif binary_model in config.model_list_binary_eccentric:
                 pb = 0.
 
                 # if BTX, orbital frequencies are used.
                 if (binary_model == 'BTX'):
-                    pb = 1 / self.FB0 / 86400
+                    pb = 1 / self.FB0["value"] / 86400
 
                 else:
-                    pb = self.PB
+                    pb = self.PB["value"]
 
                 # change T0 unless specified otherwise.
-                if (not fix_T0):
+                if not fix_T0:
                     n_orbits = np.int((new_epoch - old_T0) / pb)
                     new_T0 = old_T0 + pb * n_orbits
-                    setattr(self, 'T0', new_T0)
+                    current_dict = getattr(self, "T0")
+                    current_dict["value"] = new_T0
+                    setattr(self, "T0", current_dict)
 
                 # if desired, set binary time difference to be between 
                 # T0 and the new epoch.
-                if (rotate_binary_to_new_epoch):
+                if rotate_binary_to_new_epoch:
                     new_T0 = new_epoch
 
             diff_binary = (new_T0 - old_T0) * 86400
 
             # if derivatives in OM are set, then rotate OM.
-            new_OM = self.OM
+            new_OM = self.OM["value"]
             idx = 1
 
+            idx_OMDOT = config.parameter_list_orbit_derivatives.index("OMDOT")
+            current_orbderiv_list = config.parameter_list_orbit_derivatives
+            print(current_orbderiv_list)
+
+            sys.exit()
             for current_derivative_om in config.parameter_list_orbit_derivatives["OM"]:
-                if hasattr(self, current_derivative_om):
-                    current_value = getattr(self, current_derivative_om)
+                current_dict = getattr(self, current_derivative_om)
+
+                if current_dict["value"] is not None:
+                    current_value = current_dict["value"]
                     fac = factorial(idx)
 
                     if (current_derivative_om == "OMDOT"):
@@ -348,41 +362,45 @@ class Parfile(object):
 
                     new_OM += current_value * diff_binary**idx / fac
 
-            setattr(self, "OM", new_OM)
+            setattr(self.OM, "value", new_OM)
 
             # if derivatives in A1 are set, then rotate A1.
-            new_A1 = self.A1
+            new_A1 = self.A1["value"]
             idx = 1
 
             for current_derivative_a1 in config.parameter_list_orbit_derivatives["A1"]:
-                if hasattr(self, current_derivative_a1):
-                    current_value = getattr(self, current_derivative_a1)
+                current_dict = getattr(self, current_derivative_a1)
+
+                if current_dict["value"]:
+                    current_value = current_dict["value"]
                     fac = factorial(idx)
 
-                    if (current_derivative_om == "XDOT"):
+                    if (current_derivative_a1 == "XDOT"):
                         current_value *= 1e-12
 
-                    new_A1 += current_value * diff_binary**idx / fac
+                    new_A1 += current_value * diff_binary ** idx / fac
 
-            setattr(self, "A1", new_A1)
+            setattr(self.A1, "value", new_A1)
 
             # if derivatves in FB0 are set, then rotate FB0.
-            new_FB0 = self.FB0
+            new_FB0 = self.FB0["value"]
             idx = 1
 
             for current_derivative_fb in config.parameter_list_orbit_derivatives["FB"]:
-                if hasattr(self, current_derivative_fb):
-                    current_value = getattr(self, current_derivative_fb)
-                    fac = factorial(idx)
-                    new_FB0 += current_value * diff_binary**idx / fac
+                current_dict = getattr(self, current_derivative_fb)
 
-            setattr(self, "FB0", new_FB0)
+                if current_dict["value"]:
+                    current_value = current_dict["value"]
+                    fac = factorial(idx)
+                    new_FB0 += current_value * diff_binary ** idx / fac
+
+            setattr(self.FB0, "value", new_FB0)
 
             # if PBDOT is set, then rotate PB.
-            if hasattr(self, "PBDOT"):
-                pbdot = getattr(self, "PBDOT") * 1e-12
-                new_PB = getattr(self, "PB") + (pbdot * diff_binary) / 86400
-                setattr(self, "PB", new_PB)
+            if self.PBDOT["value"] is not None:
+                pbdot = getattr(self.PBDOT, "value") * 1e-12
+                new_PB = getattr(self.PB, "value") + (pbdot * diff_binary) / 86400
+                setattr(self.PB, "value", new_PB)
  
     def set(self, parameter: str, new_dict: dict):
         """
