@@ -1,5 +1,6 @@
 #! /usr/bin/python
 
+from matplotlib import rcParams
 from matplotlib.font_manager import FontProperties
 from ..const import T_sun, d2r
 from ..parfile import DerivePar
@@ -7,8 +8,13 @@ from .pkcorr import doppler
 import matplotlib.pyplot as plt
 import numpy as np
 
+rcParams["mathtext.fontset"] = "cm"
+
 def om1dot_m1m2(omd,omderr,a1,e,pb,om,m1,npts):
-    """Calculate upper/lower bounds of OMDOT curve in the m1-m2 plane."""
+    """
+    Calculate upper/lower bounds of OMDOT curve in the m1-m2 plane.
+    """
+
     m2omh = ((omd+omderr)*d2r*(1.-e**2)*(pb/2./np.pi)**(5./3.)/3./\
               T_sun.value**(2./3.)/86400./365.25)**(3./2.) - m1
     m2oml = ((omd-omderr)*d2r*(1.-e**2)*(pb/2./np.pi)**(5./3.)/3./\
@@ -17,12 +23,16 @@ def om1dot_m1m2(omd,omderr,a1,e,pb,om,m1,npts):
 
 
 def pbdot_m1m2(pbdot,pbdoterr,pb,e,m1,npts):
-    """Calculate the upper/lower bounds of PBDOT curve in the m1-m2 plane."""
+    """
+    Calculate the upper/lower bounds of PBDOT curve in the m1-m2 plane.
+    """
+
     m2pbdh = np.zeros(npts)
     m2pbdl = np.zeros(npts)
     fe = 1.+73./24.*e**2+37./96.*e**4
     A  = -192.*np.pi/5.*(pb/2./np.pi)**(-5./3.)*fe*(1.-e**2)**(-7./2.)*\
          T_sun.value**(5./3.)
+
     for i in range(npts):
         m2 = 1.
         # use Newton-Raphson method to get upper-bound curve.
@@ -36,6 +46,7 @@ def pbdot_m1m2(pbdot,pbdoterr,pb,e,m1,npts):
             if (np.fabs(m2-m2b) < 1e-7):
                 m2pbdh[i] = m2
                 break
+
     for k in range(npts):
         m2 = 1.
         # use Newton-Raphson method to get upper-bound curve.
@@ -49,13 +60,18 @@ def pbdot_m1m2(pbdot,pbdoterr,pb,e,m1,npts):
             if (np.fabs(m2-m2b) < 1e-7):
                 m2pbdl[k] = m2
                 break
+
     return m2pbdh, m2pbdl
 
 
 def gamma_m1m2(gam,gamerr,e,pb,m1,npts):
-    """Calculate upper/lower bounds of GAMMA curve in the m1-m2 plane."""
+    """
+    Calculate upper/lower bounds of GAMMA curve in the m1-m2 plane.
+    """
+
     m2gamh = np.zeros(npts)
     m2gaml = np.zeros(npts)
+
     for i in range(npts):
         m2 = 1.
         # use Newton-Raphson method to get upper-bound curve.
@@ -69,6 +85,7 @@ def gamma_m1m2(gam,gamerr,e,pb,m1,npts):
             if (np.fabs(m2-m2b) < 1e-7):
                 m2gamh[i] = m2
                 break
+
     for k in range(npts):
         m2 = 1.
         # use Newton-Raphson method to get lower-bound curve.
@@ -82,20 +99,29 @@ def gamma_m1m2(gam,gamerr,e,pb,m1,npts):
             if (np.fabs(m2-m2b) < 1e-7):
                 m2gaml[k] = m2
                 break
+
     return m2gamh, m2gaml
 
 
 def r_m1m2(m2,m2err,npts):
-  """Calculate upper/lower bounds of Shapiro-r curve in the m1-m2 plane."""    
-  m2rh = np.zeros(npts)+(m2+m2err)
-  m2rl = np.zeros(npts)+(m2-m2err)
-  return m2rh, m2rl
+    """
+    Calculate upper/lower bounds of Shapiro-r curve in the m1-m2 plane.
+    """
+
+    m2rh = np.zeros(npts)+(m2+m2err)
+    m2rl = np.zeros(npts)+(m2-m2err)
+
+    return m2rh, m2rl
 
 
 def s_m1m2(s,serr,x,pb,m1,npts):
-    """Calculate upper/lower bounds of Shapiro-s curve in the m1-m2 plane."""
+    """
+    Calculate upper/lower bounds of Shapiro-s curve in the m1-m2 plane.
+    """
+
     m2sh = np.zeros(npts)
     m2sl = np.zeros(npts)
+
     for i in range(npts):
         m2 = 0.2
         # use Newton-Raphson method to get upper-bound curve.
@@ -108,6 +134,7 @@ def s_m1m2(s,serr,x,pb,m1,npts):
             if (np.fabs(m2-m2b) < 1e-7):
                 m2sh[i] = m2
                 break
+
     for k in range(npts):
         m2 = 0.2
         # use Newton-Raphson method to get upper-bound curve.
@@ -120,15 +147,20 @@ def s_m1m2(s,serr,x,pb,m1,npts):
             if (np.fabs(m2-m2b) < 1e-7):
                 m2sl[k] = m2
                 break
+
     return m2sh, m2sl
 
 def om1spin_m1m2(om1s,om1serr,pb,ecc,m1,npts):
-    """Calculate upper/lower bounds of precession-rate curve in the m1-m2 plane."""
+    """
+    Calculate upper/lower bounds of precession-rate curve in the m1-m2 plane.
+    """
+
     om1serr_lo, om1serr_up = om1serr[0], om1serr[1]
     m2sh = np.zeros(npts)
     m2sl = np.zeros(npts)
     A = 0.5 * (T_sun.value)**(2./3.) * (pb / 2 / np.pi)**(-5./3.) / \
         (1 - ecc**2) * 86400 * 365.25
+
     for i in range(npts):
         m2 = 0.2
         # use Newton-Raphson method to get upper-bound curve.
@@ -141,6 +173,7 @@ def om1spin_m1m2(om1s,om1serr,pb,ecc,m1,npts):
             if (np.fabs(m2-m2b) < 1e-7):
                 m2sh[i] = m2
                 break
+
     for k in range(npts):
         m2 = 0.2
         for l in range(100):
@@ -152,11 +185,12 @@ def om1spin_m1m2(om1s,om1serr,pb,ecc,m1,npts):
             if (np.fabs(m2-m2b) < 1e-7):
                 m2sl[k] = m2
                 break
+
     return m2sh, m2sl
 
 # define m1m2 class that uses the above functions when they're set in parfile.
 
-class M1M2():
+class M1M2(object):
 
     def __init__(self, inobj, npts=200, font_name="serif", om1s=[False,False,False], pkcorr='n'):
         """
@@ -177,49 +211,63 @@ class M1M2():
         self.font = FontProperties()
         self.font.set_name(font_name)
 
+        a1 = inobj.A1["value"] 
+        e = inobj.E["value"] 
+        pb = inobj.PB["value"] * 86400
+        om = inobj.OM
+        m1 = 3. * np.arange(npts) / (npts-1.)
 
-        a1, e, pb, om = inobj.A1, inobj.E, inobj.PB*86400., inobj.OM
-        m1 = 3.*np.arange(npts)/(npts-1.)
         setattr(self,'m1',m1)
         m2omh = m2oml = np.zeros(npts)
+
         # if OMDOT and its error are set, calculate m1m2 arrays.
-        if (hasattr(inobj,'OMDOT') and hasattr(inobj,'OMDOTerr')):
-            omdot, omdoterr = inobj.OMDOT, inobj.OMDOTerr
+        if inobj.OMDOT["error"] is not None:
+            omdot = inobj.OMDOT["value"] 
+            omdoterr = inobj.OMDOT["error"]
             m2omh, m2oml = om1dot_m1m2(omdot,omdoterr,a1,e,pb,om,m1,npts)
             setattr(self,'OMDOT_U',m2omh)
             setattr(self,'OMDOT_L',m2oml)
+
         # if GAMMA and its error are set, calculate m1m2 arrays.
-        if (hasattr(inobj,'GAMMA') and hasattr(inobj,'GAMMAerr')):
-            gamma, gammaerr = inobj.GAMMA, inobj.GAMMAerr
+        if inobj.GAMMA["error"] is not None:
+            gamma = inobj.GAMMA["value"]
+            gammaerr = inobj.GAMMA["error"]
             m2gamh, m2gaml  = gamma_m1m2(gamma,gammaerr,e,pb,m1,npts)
             setattr(self,'GAMMA_U',m2gamh)
             setattr(self,'GAMMA_L',m2gaml)
+
         # if Shapiro-r and its error are set, calculate m1m2 arrays.
-        if (hasattr(inobj,'M2') and hasattr(inobj,'M2err')):
-            r, rerr = inobj.M2, inobj.M2err
+        if inobj.M2["error"] is not None :
+            r = inobj.M2["value"] 
+            rerr = inobj.M2["error"]
             m2rh, m2rl  = r_m1m2(r,rerr,npts)
             setattr(self,'r_U',m2rh)
             setattr(self,'r_L',m2rl)
+
         # if Shapiro-s and its error are set, calculate m1m2 arrays.
-        if (hasattr(inobj,'SINI') and hasattr(inobj,'SINIerr')):
-            s, serr = inobj.SINI, inobj.SINIerr
+        if inobj.SINI["error"] is not None:
+            s = inobj.SINI["value"] 
+            serr = inobj.SINI["error"]
             m2sh, m2sl  = s_m1m2(s,serr,a1,pb,m1,npts)
             setattr(self,'s_U',m2sh)
             setattr(self,'s_L',m2sl)
+
         # if PBDOT and its error are set, calculate m1m2 arrays.
-        if (hasattr(inobj,'PBDOT') and hasattr(inobj,'PBDOTerr')):
-            pbdot, pbdoterr = inobj.PBDOT, inobj.PBDOTerr
-            if (pkcorr == 'y'):
-                der = DerivePar(inobj)
-                b, l, mu, muerr = der.gal_b, der.gal_l, der.mu, der.muerr
-                corr, corr_err = doppler(0.7,0.3,b,l,mu,muerr)
-                corr     *= inobj.PB*86400.*1e12
-                corr_err *= inobj.PB*86400.*1e12
-                pbdot -= sum(corr)
-                pbdoterr = np.sqrt(pbdoterr**2+corr_err**2)
+        if inobj.PBDOT["error"] is not None:
+            pbdot = inobj.PBDOT["value"]
+            pbdoterr = inobj.PBDOT["error"]
+            #if (pkcorr == 'y'):
+            #    der = DerivePar(inobj)
+            #    b, l, mu, muerr = der.gal_b, der.gal_l, der.mu, der.muerr
+            #    corr, corr_err = doppler(0.7,0.3,b,l,mu,muerr)
+            #    corr     *= inobj.PB*86400.*1e12
+            #    corr_err *= inobj.PB*86400.*1e12
+            #    pbdot -= sum(corr)
+            #    pbdoterr = np.sqrt(pbdoterr**2+corr_err**2)
             m2pbdh, m2pbdl  = pbdot_m1m2(pbdot,pbdoterr,pb,e,m1,npts)
             setattr(self,'PBDOT_U',m2pbdh)
             setattr(self,'PBDOT_L',m2pbdl)
+
         # if OM1SPIN and the uncertainties are set, calculate m1m2 arrays.
         if (any(om1s)):
             om1smed = om1s[0]
@@ -228,38 +276,53 @@ class M1M2():
             m2om1sh, m2om1sl = om1spin_m1m2(om1smed, om1serr, pb, e, m1, npts)
             setattr(self,'OM1SPIN_U',m2om1sh)
             setattr(self,'OM1SPIN_L',m2om1sl)
-    def plot(self, labels={}):
-        """Plot availabe m1-m2 data using the matplotlib package."""
+
+    def plot(self, pbdot_extra: float = None):
+        """
+        Plot availabe m1-m2 data using the matplotlib package.
+        """
+
         if (hasattr(self,'OMDOT_U') and hasattr(self,'OMDOT_L')):
             #plt.plot(self.m1,self.OMDOT_U,'k-')
             #plt.plot(self.m1,self.OMDOT_L,'k-')
             plt.fill_between(self.m1, self.OMDOT_U, self.OMDOT_L, color='k', alpha=0.8)
             plt.text(2.0, 0.4, r'$\dot{\omega}$', fontproperties=self.font, fontsize=15)
+
         if (hasattr(self,'GAMMA_U') and hasattr(self,'GAMMA_L')):
             #plt.plot(self.m1,self.GAMMA_U,'g-')
             #plt.plot(self.m1,self.GAMMA_L,'g-')
             plt.text(0.2, 1.0, r'$\gamma$', fontproperties=self.font, fontsize=15)
             plt.fill_between(self.m1, self.GAMMA_U, self.GAMMA_L, color='g', alpha=0.8)
+
         if (hasattr(self,'r_U') and hasattr(self,'r_L')):
             #plt.plot(self.m1,self.r_U,'r-')
             #plt.plot(self.m1,self.r_L,'r-')
             plt.fill_between(self.m1, self.r_U, self.r_L, color='r', alpha=0.5)
-            plt.text(2.7, 1.2, r'$r$', fontproperties=self.font, fontsize=15)
+            plt.text(2.7, 1.1, r'$r$', fontproperties=self.font, fontsize=15)
+
         if (hasattr(self,'s_U') and hasattr(self,'s_L')):
             #plt.plot(self.m1,self.s_U,'m-')
             #plt.plot(self.m1,self.s_L,'m-')
             plt.fill_between(self.m1, self.s_U, self.s_L, color='m', alpha=0.5)
             plt.text(0.5, 0.7, r'$s$', fontproperties=self.font, fontsize=15)
+
         if (hasattr(self,'PBDOT_U') and hasattr(self,'PBDOT_L')):
             #plt.plot(self.m1,self.PBDOT_U,'b-')
             #plt.plot(self.m1,self.PBDOT_L,'b-')
             plt.fill_between(self.m1, self.PBDOT_U, self.PBDOT_L, color='blue', alpha=0.5)
-            plt.text(1.3, 2.5, r'$\dot{P}_{\rm b}$', fontproperties=self.font, fontsize=15)
+            plt.text(0.9, 2.5, r'$\dot{P}_{\rm b}$', fontproperties=self.font, fontsize=15)
+
+        if pbdot_extra is not None:
+            pbdot_extra_lo, pbdot_extra_hi = pbdot_extra
+            plt.plot(self.m1, pbdot_extra_lo, 'k--')
+            plt.plot(self.m1, pbdot_extra_hi, 'k--')
+
         if (hasattr(self,'OM1SPIN_U') and hasattr(self,'OM1SPIN_L')):
             #plt.plot(self.m1,self.OM1SPIN_U,'y-')
             #plt.plot(self.m1,self.OM1SPIN_L,'y-')
             plt.fill_between(self.m1, self.OM1SPIN_U, self.OM1SPIN_L, color='yellow', alpha=0.7)
             plt.text(2.5, 2.3, r'$\Omega_1^{\rm spin}$', fontproperties=self.font, fontsize=15)
+
         plt.xlim(0.,3.)
         plt.ylim(0.,3.)
         plt.axes().set_aspect('equal')
