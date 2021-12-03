@@ -38,6 +38,8 @@ parameter_list_orbit_Kepler = [
 
 parameter_list_orbit_DDK = ["KOM", "KIN"]
 
+parameter_list_orbit_DDGR = ["MTOT", "XPBDOT"]
+
 parameter_list_orbit_PK = ["M2", "SINI", "GAMMA", "DTHETA", "DR"]
 
 parameter_list_orbit_derivatives = \
@@ -77,8 +79,8 @@ parameter_list_full = \
     parameter_list_astrometry + parameter_list_spin + parameter_list_DM + \
     parameter_list_DMX + parameter_list_FD + parameter_list_orbit_Kepler +\
     parameter_list_orbit_BTX + parameter_list_epoch + parameter_list_orbit_derivatives +\
-    parameter_list_orbit_PK + parameter_list_orbit_DDK + parameter_list_error +\
-    parameter_list_rednoise
+    parameter_list_orbit_PK + parameter_list_orbit_DDK + parameter_list_orbit_DDGR +\
+    parameter_list_error + parameter_list_rednoise
 
 # prune above list for duplicates, while preserving order.
 seen = set()
