@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-class ReadFits():
+class ReadFits(object):
     """
     Defines a class that stores data and header info from an input PSRFITS file.
     """
@@ -81,12 +81,15 @@ class ReadFits():
 
         for pol in range(self.n_pol):
             freq_idx = 0
+
             for freq in self.channel_freqs:
                 # compute DM time delay.
-                shift_dm = dm_time_delay(self.dm, freq, reference_freq) / period_topo
+                shift_dm = dm_delay(self.dm, freq, reference_freq).value / period_topo
+
                 for subint in range(self.n_ints):
                     # dedisperse by shifting to common phase.
                     self.data[subint, pol, freq_idx, :] = ft.fftshift(self.data[subint, pol, freq_idx, :], tau=shift_dm)
+
                 freq_idx += 1
 
     def downsample(self, freqs, chan_data, new_bins, pol=0):
@@ -219,12 +222,15 @@ class ReadFits():
             self.remove_baseline()
 
         for kk in range(self.n_ints):
-            n_chan_good = 0
-            for ll in range(self.n_chan):
-                if (ll not in ignore_chans):
-                    phase_time_map[kk, :] += self.data[kk, 0, ll, :]
-                    n_chan_good += 1
-            phase_time_map[kk, :] /= n_chan_good
+            if kk not in ignore_subints:
+                n_chan_good = 0
+
+                for ll in range(self.n_chan):
+                    if (ll not in ignore_chans):
+                        phase_time_map[kk, :] += self.data[kk, 0, ll, :]
+                        n_chan_good += 1
+
+                phase_time_map[kk, :] /= n_chan_good
 
         return phase_time_map
 

@@ -238,7 +238,7 @@ x_label = ""
 y_label = ""
 z_label = ""
 
-if any([gridDDGR, gridM2MTOT, gridM1M2, gridH3STIG, gridH3H4]):
+if any([gridDDGR, gridDDK, gridM2MTOT, gridM1M2, gridH3STIG, gridH3H4]):
     grid_m2cosi = False
 
     if any([gridDDGR, gridM2MTOT]):
@@ -247,6 +247,12 @@ if any([gridDDGR, gridM2MTOT, gridM1M2, gridH3STIG, gridH3H4]):
         x = np.linspace(mtot_lo, mtot_hi, num=Ngrid)
         y = np.linspace(m2_lo, m2_hi, num=Ngrid)
     
+    elif gridDDK:
+        x_label = r"\cos i"
+        y_label = "KOM"
+        x = np.linspace(cosi_lo, cosi_hi, num=Ngrid)
+        y = np.linspace(theta_lo, theta_hi, num=Ngrid)
+
     elif gridM1M2:
         x_label = "M1"
         y_label = "M2"
@@ -284,7 +290,7 @@ if any([px_lo, px_hi]) != 0.:
     z_label = "PX"
     z = np.linspace(px_lo, px_hi, num=Ngrid)
 
-elif any([theta_lo, theta_hi]) != 0.:
+elif grid_m2cosi and any([theta_lo, theta_hi]) != 0.:
     fixXDOT = True
     grid_3D = True
     z_label = "THETA"
@@ -460,7 +466,7 @@ if fixGAMMA:
     # check if input parfile has a GAMMA.
     if hasattr(input_par, "GAMMA"):
         print("    * fixing GAMMA to GR value (best-fit GAMMA = {0:.5f} ms)".format(
-                input_par.GAMMA * 1000.
+                input_par.GAMMA["value"] * 1000.
             )
         )
 
@@ -572,6 +578,11 @@ for x_elem in x:
 
                 sini_elem = (mass_func * (m1_elem + m2_elem)**2)**(1./3.) / m2_elem
 
+        # if grid is instead over KOM/KIN terms, treat those separately.
+        elif gridDDK:
+            new_par.set("KIN", {"value": np.arccos(x_elem) * 180 / np.pi, "flag": 0})
+            new_par.set("KOM", {"value": y_elem, "flag": 0})
+
         # if grid is instead "orthometric", compute H3/H4/STIG values.
         elif any([gridH3H4, gridH3STIG]):
             pass
@@ -588,7 +599,11 @@ for x_elem in x:
 
         # the following is for GAMMA.
         if fixGAMMA:
-            pass
+            gamma_elem = orbvar.gamma_GR(
+                m1_elem, m2_elem, orbital_period, eccentricity
+	    )
+
+            new_par.set("GAMMA", {"value": gamma_elem, "flag": 0})
 
         # the following is for PBDOT.
         if fixPBDOT:

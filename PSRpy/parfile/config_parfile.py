@@ -6,7 +6,7 @@ Configuration file containing parameters and lists that control the Parfile() ob
 n_derivatives_orbit = 10
 n_derivatives_spin = 20
 n_derivatives_DM = 10
-n_derivatives_FD = 6
+n_derivatives_FD = 10
 n_orbits_BTX = 3
 n_bins_DMX = 1000
 
@@ -21,7 +21,7 @@ parameter_list_spin = ["F{0}".format(str(num)) for num in range(n_derivatives_sp
 
 # lst of DM parameters.
 parameter_list_DM = ["DM"] +\
-    ["DM{0}".format(num) for num in range(1, n_derivatives_DM)]
+    ["DM00{0}".format(num) for num in range(1, n_derivatives_DM)]
 
 parameter_list_DMX = ["DMX"]
 for current_bin in range(n_bins_DMX):
@@ -33,7 +33,7 @@ parameter_list_FD = ["FD{0}".format(num) for num in range(1, n_derivatives_FD)]
 
 # lists for orbital parameters.
 parameter_list_orbit_Kepler = [
-    "A1", "PB", "E", "ECC", "OM", "T0", "EPS1", "EPS2", "TASC"
+    "A1", "PB", "FB", "FB0", "E", "ECC", "OM", "T0", "EPS1", "EPS2", "TASC"
 ]
 
 parameter_list_orbit_DDK = ["KOM", "KIN"]
@@ -43,10 +43,10 @@ parameter_list_orbit_DDGR = ["MTOT", "XPBDOT"]
 parameter_list_orbit_PK = ["M2", "SINI", "GAMMA", "DTHETA", "DR"]
 
 parameter_list_orbit_derivatives = \
-    ["XDOT"] + ["X{0}".format(str(num) for num in range(2, n_derivatives_orbit))] +\
-    ["EDOT"] + ["E{0}".format(str(num) for num in range(2, n_derivatives_orbit))] +\
-    ["OMDOT"] + ["OM{0}".format(str(num) for num in range(2, n_derivatives_orbit))] +\
-    ["FB{0}".format(str(num) for num in range(1, n_derivatives_orbit))] +\
+    ["XDOT"] + ["XDOT{0}".format(str(num)) for num in range(2, n_derivatives_orbit)] +\
+    ["EDOT"] + ["EDOT{0}".format(str(num)) for num in range(2, n_derivatives_orbit)] +\
+    ["OMDOT"] + ["OMDOT{0}".format(str(num)) for num in range(2, n_derivatives_orbit)] +\
+    ["FB{0}".format(str(num)) for num in range(1, n_derivatives_orbit)] +\
     ["PBDOT"] # to my knowledge, only PBDOT is defined in TEMPO/TEMPO2/PINT.
 
 parameter_list_orbit_BTX = []

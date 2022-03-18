@@ -14,7 +14,7 @@ def gamma_GR(m1, m2, pb, e):
     """
     
     pb_in = pb * 86400
-    A = e * (pb_in / 2 / pi)**(1./3.) * T_sun**(2./3.)
+    A = e * (pb_in / 2 / pi)**(1./3.) * T_sun.value**(2./3.)
     return A * m2 * (m1 + 2 * m2) / (m1 + m2)**(4./3.)
 
 def omdot_GR(m1, m2, pb, e, use_PK2=False):
