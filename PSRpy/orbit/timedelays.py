@@ -196,13 +196,13 @@ def delay_orbit_roemer(dates, orbital_elements, xdot=0, pbdot=0, omdot=0, gamma=
     eccentric_orbit_models = ["BT", "DD", "DDGR"]
 
     if (binary_model in eccentric_orbit_models):
-        x, pb, ecc, om, t0 = orbital_elements
+        x, pb, ecc, om0, t0 = orbital_elements
 
         # first, compute Keplerian term.
-        ma = anomaly_mean(pb, dates, t0, pbdot=(pbdot * 1e-12)) 
-        ea = anomaly_eccentric(ma, ecc, tolerance=tolerance) 
-        om = argument_periastron(om, pb, ecc, dates, t0, pbdot=pbdot, omdot=omdot, 
-                                   binary_model=binary_model, tolerance=tolerance) 
+        ma = anomaly_mean(dates, pb, t0, pbdot=(pbdot * 1e-12)) 
+        ea = anomaly_eccentric(ma, ecc, nr_tolerance=tolerance) 
+        om = argument_periastron(dates, om0, pb, ecc, t0, pbdot=pbdot, omdot=omdot, 
+                                   binary_model=binary_model, nr_tolerance=tolerance) 
         se, ce = np.sin(ea * d2r), np.cos(ea * d2r)
         so, co = np.sin(om * d2r), np.cos(om * d2r)
         alpha = (x + (xdot * 1e-12) * (dates - t0)) * so

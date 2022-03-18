@@ -71,8 +71,8 @@ def anomaly_eccentric(anomaly_mean: float, eccentricity: float, initial_guess: f
     ma_in = np.array(anomaly_mean) * d2r    
 
     # define variables needed for NR method.
-    ea = np.zeros(len(ma_in))
-    ea0 = np.zeros(len(ma_in)) + initial_guess
+    ea = 0.
+    ea0 = initial_guess
     ea_mid = ma_in.copy()
 
     # loop over desired number of attempts to perform NR calculation.
@@ -82,7 +82,7 @@ def anomaly_eccentric(anomaly_mean: float, eccentricity: float, initial_guess: f
         ea_mid -= func / func_deriv
 
         # if the anomaly has sub-threshold accuracy, break out.
-        if all(np.fabs(ea_mid - ea0) < nr_tolerance):
+        if np.all(np.fabs(ea_mid - ea0) < nr_tolerance):
             ea = ea_mid
             break
 

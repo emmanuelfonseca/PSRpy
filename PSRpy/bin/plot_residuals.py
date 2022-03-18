@@ -65,6 +65,15 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--phase_orbit",
+    action="store",
+    default=None,
+    dest="use_legend",
+    nargs=2,
+    help="If set, then generate a legend for the residuals figure/panel."
+)
+
+parser.add_argument(
     "--save", 
     action="store_true", 
     dest="save_plot", 
@@ -83,20 +92,13 @@ args = parser.parse_args()
 resid2_file = args.resid2_files
 dmx_file = args.dmx_file
 info_file = args.info_file
+phase_orbit = args.phase_orbit
 save_filename = args.save_filename
 x_limits = args.x_limits
 use_grid = args.use_grid
 use_legend = args.use_legend
 save_plot = args.save_plot
 time_in_years = args.time_in_years
-
-# before moving forward, define an alias dictionary for legend labels.
-label_alias = {
-    "CHIME": "CHIME",
-    "CHIME_CHIME": "CHIME",
-    "Rcvr1_2_GUPPI": "GUPPI/1420-MHz",
-    "Rcvr_800_GUPPI": "GUPPI/820-MHz",
-}
 
 # extract TOA/info data.
 toa_data, labels = read_resid2(resid2_file, info_file=info_file)
@@ -106,16 +108,17 @@ dmx_val = []
 n_panels = 1
 
 # if DMX file is supplied, then generate two panels.
-if (dmx_file is not None):
+if dmx_file is not None:
 
     try:
         print("reading DMX information from {}...".format(dmx_file))
 
         for current_line in open(dmx_file, "r"):
-            elem = current_line.split()
-            dmx_mjd += [np.float(elem[0])]
-            dmx_err += [np.float(elem[2])]
-            dmx_val += [np.float(elem[1])]
+            if "#" not in current_line:
+                elem = current_line.split()
+                dmx_mjd += [np.float(elem[0])]
+                dmx_err += [np.float(elem[2])]
+                dmx_val += [np.float(elem[1])]
  
         # adjust value of matplotlib panels if DMX data are read.
         n_panels = 2
@@ -137,7 +140,7 @@ font.set_size(13)
 fig, axs = plt.subplots(n_panels)
 x_axis_label = "MJD"
 
-if (len(labels) != 0):
+if len(labels) != 0:
     # obtain unique labela and loop over them.
     unique_labels = list(set(labels))
     print("plotting {0} sets of TOAs...".format(len(unique_labels)))
@@ -149,7 +152,7 @@ if (len(labels) != 0):
         current_residuals = (toa_data["residuals"])[current_idx] * 1e6
         current_residuals_err = (toa_data["toa_uncertainties"])[current_idx] 
 
-        if (time_in_years):
+        if time_in_years:
             x_axis_label = "Year"
             current_toas = (current_toas - 53005.) / 365.25 + 2004.
 
@@ -159,27 +162,36 @@ if (len(labels) != 0):
                 current_residuals,
                 yerr=current_residuals_err,
                 fmt='+',
-                label=label_alias[current_label]
+                label=current_label
             )
 
             axs[0].set_ylabel(r"$\mathcal{R}$ ($\mu$s)", fontproperties=font)
 
-            if (use_grid):
+            # now set optional features if desired.
+            if use_grid:
                 axs[0].grid(linestyle="--")
+
+            if use_legend:
+                axs[0].legend(loc="upper left", ncol=3)
 
         else:
             axs.errorbar(
                 current_toas,
                 current_residuals,
                 yerr=current_residuals_err,
-                fmt='+'
+                fmt='+',
+                label=current_label
             )
 
             axs.set_xlabel(x_axis_label, fontproperties=font)
             axs.set_ylabel(r"$\mathcal{R}$ ($\mu$s)", fontproperties=font)
 
-    if (use_legend):
-        axs[0].legend(loc="upper left", ncol=3)
+            # now set optional features if desired.
+            if use_grid:
+                axs.grid(linestyle="--")
+
+            if use_legend:
+                axs.legend(loc="upper left", ncol=3)
 
 else:
     plt.errorbar(

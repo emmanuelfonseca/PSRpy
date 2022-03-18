@@ -339,15 +339,13 @@ class Parfile(object):
             diff_binary = (new_T0 - old_T0) * 86400
 
             # if derivatives in OM are set, then rotate OM.
+            orbderiv_list = config.parameter_list_orbit_derivatives
+            idx_OMDOT = orbderiv_list.index("OMDOT")
             new_OM = self.OM["value"]
             idx = 1
 
-            idx_OMDOT = config.parameter_list_orbit_derivatives.index("OMDOT")
-            current_orbderiv_list = config.parameter_list_orbit_derivatives
-            print(current_orbderiv_list)
 
-            sys.exit()
-            for current_derivative_om in config.parameter_list_orbit_derivatives["OM"]:
+            for current_derivative_om in orbderiv_list[idx_OMDOT:idx_OMDOT+config.n_derivatives_orbit-1]:
                 current_dict = getattr(self, current_derivative_om)
 
                 if current_dict["value"] is not None:
@@ -362,16 +360,19 @@ class Parfile(object):
 
                     new_OM += current_value * diff_binary**idx / fac
 
-            setattr(self.OM, "value", new_OM)
+            current_dict = getattr(self, "OM")
+            current_dict["value"] = new_OM
+            setattr(self, "OM", current_dict)
 
             # if derivatives in A1 are set, then rotate A1.
+            idx_XDOT = orbderiv_list.index("XDOT")
             new_A1 = self.A1["value"]
             idx = 1
 
-            for current_derivative_a1 in config.parameter_list_orbit_derivatives["A1"]:
+            for current_derivative_a1 in orbderiv_list[idx_XDOT:idx_XDOT+config.n_derivatives_orbit-1]:
                 current_dict = getattr(self, current_derivative_a1)
 
-                if current_dict["value"]:
+                if current_dict["value"] is not None:
                     current_value = current_dict["value"]
                     fac = factorial(idx)
 
@@ -380,21 +381,47 @@ class Parfile(object):
 
                     new_A1 += current_value * diff_binary ** idx / fac
 
-            setattr(self.A1, "value", new_A1)
+            current_dict = getattr(self, "A1")
+            current_dict["value"] = new_A1
+            setattr(self, "A1", current_dict)
 
             # if derivatves in FB0 are set, then rotate FB0.
+            idx_FB1 = orbderiv_list.index("FB1")
             new_FB0 = self.FB0["value"]
             idx = 1
 
-            for current_derivative_fb in config.parameter_list_orbit_derivatives["FB"]:
+            for current_derivative_fb in orbderiv_list[idx_FB1:idx_FB1+config.n_derivatives_orbit-1]:
                 current_dict = getattr(self, current_derivative_fb)
 
-                if current_dict["value"]:
+                if current_dict["value"] is not None:
                     current_value = current_dict["value"]
                     fac = factorial(idx)
                     new_FB0 += current_value * diff_binary ** idx / fac
 
-            setattr(self.FB0, "value", new_FB0)
+            current_dict = getattr(self, "FB0")
+            current_dict["value"] = new_FB0
+            setattr(self, "FB0", current_dict)
+
+            # if derivatves in ECC are set, then rotate ECC.
+            idx_ECC = orbderiv_list.index("EDOT")
+            new_ECC = self.E["value"]
+            idx = 1
+
+            for current_derivative_ecc in orbderiv_list[idx_ECC:idx_ECC+config.n_derivatives_orbit-1]:
+                current_dict = getattr(self, current_derivative_ecc)
+
+                if current_dict["value"] is not None:
+                    current_value = current_dict["value"]
+                    fac = factorial(idx)
+
+                    if current_derivative_ecc == "EDOT":
+                        current_value *= 1e-12
+
+                    new_ECC += current_value * diff_binary ** idx / fac
+
+            current_dict = getattr(self, "E")
+            current_dict["value"] = new_ECC
+            setattr(self, "E", current_dict)
 
             # if PBDOT is set, then rotate PB.
             if self.PBDOT["value"] is not None:
@@ -517,9 +544,9 @@ class Parfile(object):
 
                                 # if parameters are usually presented in exponent form, 
                                 # then adjust here as needed.
-                                if current_parameter in config.parameter_list_exponent:
+                                if current_parameter in config.parameter_list_exponent or length_value > 20:
                                     current_type = "e"
-                                    length_value = 7
+                                    length_value = 10
 
                                 length_name = 25 - length_value 
                                 current_line = "{0:<{1}} {2:>.{3}{4}}  {5}  {6}\n".format(

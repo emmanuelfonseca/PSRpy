@@ -187,9 +187,18 @@ if ('PX' in GridDict):
     px_hi = np.max(px_1D)
 
 # print out some info about the input grid.
-cosi_bestfit = np.sqrt(1 - sini_bestfit**2)
-m1_bestfit = np.sqrt((m2_bestfit * sini_bestfit)**3 / mf) - m2_bestfit
-m_tot_bestfit = m1_bestfit + m2_bestfit
+try:
+   cosi_bestfit = np.sqrt(1 - sini_bestfit**2)
+   m1_bestfit = np.sqrt((m2_bestfit * sini_bestfit)**3 / mf) - m2_bestfit
+   m_tot_bestfit = m1_bestfit + m2_bestfit
+
+except:
+   print("WARNING: input .pkl likely doesn't contain best-fit Shapiro parameter values?")
+   sini_bestfit = 0.3
+   m2_bestfit = 0.3
+   cosi_bestfit = np.sqrt(1 - sini_bestfit**2)
+   m1_bestfit = np.sqrt((m2_bestfit * sini_bestfit)**3 / mf) - m2_bestfit
+   m_tot_bestfit = m1_bestfit + m2_bestfit
 
 print("Input grid info for {}:".format(GridDict['PSR']))
 print("    * best-fit chisq: {0:.3f}".format(np.min(chi2)))
