@@ -46,7 +46,7 @@ parser.add_argument(
     default=[], 
     dest="x_limits", 
     nargs=2, 
-    type=np.float, 
+    type=float, 
     help="If set, use supplied values to set limits on the x-axis."
 )
 
@@ -68,7 +68,7 @@ parser.add_argument(
     "--phase_orbit",
     action="store",
     default=None,
-    dest="use_legend",
+    dest="phase_orbit",
     nargs=2,
     help="If set, then generate a legend for the residuals figure/panel."
 )
@@ -116,9 +116,9 @@ if dmx_file is not None:
         for current_line in open(dmx_file, "r"):
             if "#" not in current_line:
                 elem = current_line.split()
-                dmx_mjd += [np.float(elem[0])]
-                dmx_err += [np.float(elem[2])]
-                dmx_val += [np.float(elem[1])]
+                dmx_mjd += [float(elem[0])]
+                dmx_err += [float(elem[2])]
+                dmx_val += [float(elem[1])]
  
         # adjust value of matplotlib panels if DMX data are read.
         n_panels = 2

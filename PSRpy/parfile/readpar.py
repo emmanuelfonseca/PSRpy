@@ -8,6 +8,7 @@ import PSRpy.utils.math as math
 import matplotlib.pyplot as plt
 import astropy.units as u
 import numpy as np
+import copy
 import sys
 
 class Parfile(object):
@@ -212,17 +213,45 @@ class Parfile(object):
                             "option" : None, "value" : None, "flag" : None, "error" : None
                         }                        
 
-                        jump_dict["option"] = lsplit[1]
-                        jump_dict["value"] = np.float(lsplit[3])
+                        try:
+                            if lsplit[1] == "MJD":
+                                jump_dict["option"] = f"{lsplit[1]} {lsplit[2]} {lsplit[3]}"
+                                jump_dict["value"] = float(lsplit[4])
+                            
+                                try:
+                                    jump_dict["flag"] = int(lsplit[5])
 
-                        # if fit flag and error are present, stash those.
-                        if len(lsplit) >= 4:
-                            jump_dict["flag"] = int(lsplit[4])
+                                except:
+                                    pass
 
-                            if len(lsplit) > 5:
-                                jump_dict["error"] = efac * float(lsplit[5])
+                                try:
+                                    jump_dict["error"] = int(lsplit[6])
+
+                                except:
+                                    pass
+
+                            else:
+                                jump_dict["option"] = lsplit[1]
+                                jump_dict["value"] = np.float(lsplit[3])
+
+                                # if fit flag and error are present, stash those.
+                                try:
+                                    jump_dict["flag"] = int(lsplit[4])
+
+                                except:
+                                    pass
+
+                                try:
+                                    jump_dict["error"] = int(lsplit[5])
+
+                                except:
+                                    pass
+
                 
-                        current_dict[lsplit[2]] = jump_dict
+                            current_dict[lsplit[2]] = jump_dict
+
+                        except:
+                            print("WARNING: JUMP line is not interpretable!")
 
                     else:
                         error_dict = {"option" : lsplit[1], "value" : float(lsplit[3])}
@@ -262,8 +291,11 @@ class Parfile(object):
 
         from math import factorial
 
-        old_epoch = self.PEPOCH["value"]
+        old_epoch = copy.deepcopy(self.PEPOCH["value"])
+        epoch_dict = copy.deepcopy(getattr(self, "PEPOCH"))
+        epoch_dict["value"] = new_epoch
         diff_epoch = (new_epoch - old_epoch) * 86400
+        setattr(self, "PEPOCH", epoch_dict)
 
         # if proper-motion terms are set, rotate sky coordinates.
         if self.PMBETA["value"] is not None and self.PMLAMBDA["value"] is not None:
@@ -306,35 +338,32 @@ class Parfile(object):
         # if in binary system, rotate relevant binary parameters.
         if self.BINARY["value"] is not None:
             binary_model = self.BINARY["value"]
-            new_Tasc = 0.
             old_T0 = self.T0["value"]
             new_T0 = 0.
+            pb = self.PB["value"]
+            time_parameter = "T0"
 
+            # if binary usses ELL1 parameterization, grab TASC.
             if binary_model in config.model_list_binary_circular:
-                pass
+                old_T0 = self.TASC["value"]
+                time_parameter = "TASC"
 
-            elif binary_model in config.model_list_binary_eccentric:
-                pb = 0.
+            # if BTX, orbital frequencies are used.
+            if self.FB0["value"] is not None:
+                pb = 1 / self.FB0["value"] / 86400
 
-                # if BTX, orbital frequencies are used.
-                if (binary_model == 'BTX'):
-                    pb = 1 / self.FB0["value"] / 86400
+            # change T0 unless specified otherwise.
+            if not fix_T0:
+                n_orbits = np.int((new_epoch - old_T0) / pb)
+                new_T0 = old_T0 + pb * n_orbits
+                current_dict = getattr(self, time_parameter)
+                current_dict["value"] = new_T0
+                setattr(self, time_parameter, current_dict)
 
-                else:
-                    pb = self.PB["value"]
-
-                # change T0 unless specified otherwise.
-                if not fix_T0:
-                    n_orbits = np.int((new_epoch - old_T0) / pb)
-                    new_T0 = old_T0 + pb * n_orbits
-                    current_dict = getattr(self, "T0")
-                    current_dict["value"] = new_T0
-                    setattr(self, "T0", current_dict)
-
-                # if desired, set binary time difference to be between 
-                # T0 and the new epoch.
-                if rotate_binary_to_new_epoch:
-                    new_T0 = new_epoch
+            # if desired, set binary time difference to be between 
+            # T0 and the new epoch.
+            if rotate_binary_to_new_epoch:
+                new_T0 = new_epoch
 
             diff_binary = (new_T0 - old_T0) * 86400
 
