@@ -152,13 +152,13 @@ for current_offset_ra in ra_offsets:
             out, err = p.communicate()
             try:
                 m = re.search(r'Chisqr/nfree\W+(\d+\.\d+)\W+(\d+)\W+(\d+\.\d+)', str(out))
-                chisq[c1,c2] = np.float(m.group(3)) * np.float(m.group(2))
+                chisq[c1, c2] = float(m.group(3)) * float(m.group(2))
                 if (chisq[c1, c2] < chisq_min):
                     chisq_min = chisq[c1, c2]
                     best_offset_ra = current_offset_ra
                     best_offset_dec = current_offset_dec
             except:
-                chisq[c1,c2] = 1e6
+                chisq[c1, c2] = 1e6
 
         else:
 
@@ -169,8 +169,8 @@ for current_offset_ra in ra_offsets:
             out3, err3 = p3.communicate()
             line = out3.split()
             if (c1 == 0 and c2 == 0):
-                nfree = np.float(line[2])
-            chisq[c1,c2] = np.float(line[1]) * np.float(line[2])
+                nfree = float(line[2])
+            chisq[c1,c2] = float(line[1]) * float(line[2])
             if (chisq[c1, c2] < chisq_min):
                 chisq_min = chisq[c1, c2]
         c1 += 1
@@ -187,7 +187,7 @@ print()
 deltachi2 = chisq - np.min(chisq)
 pdf2D = 0.5 * np.exp(-0.5 * deltachi2)
 
-plt.pcolormesh(ra_offsets, dec_offsets, pdf2D, vmin=0, vmax=np.max(pdf2D), cmap="Blues")
+plt.pcolormesh(ra_offsets, dec_offsets, np.transpose(pdf2D), vmin=0, vmax=np.max(pdf2D), cmap="Blues")
 plt.colorbar()
 plt.xlabel(r'Offset in R. A. (arcsecond)', fontproperties=font, fontsize=15)
 plt.ylabel(r'Offset in Dec. (arcescond)', fontproperties=font, fontsize=15)
