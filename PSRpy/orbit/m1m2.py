@@ -214,7 +214,7 @@ class M1M2(object):
         a1 = inobj.A1["value"] 
         e = inobj.E["value"] 
         pb = inobj.PB["value"] * 86400
-        om = inobj.OM
+        om = inobj.OM["value"]
         m1 = 3. * np.arange(npts) / (npts-1.)
 
         setattr(self,'m1',m1)
@@ -325,7 +325,7 @@ class M1M2(object):
 
         plt.xlim(0.,3.)
         plt.ylim(0.,3.)
-        plt.axes().set_aspect('equal')
+        #plt.axes().set_aspect('equal')
         plt.xlabel(r'Pulsar Mass (${\rm M}_{\odot}$)', fontproperties=self.font, fontsize=15)
         plt.ylabel(r'Companion Mass (${\rm M}_{\odot}$)', fontproperties=self.font, fontsize=15)
         plt.savefig('m1m2.png', dpi=500, fmt='png')
