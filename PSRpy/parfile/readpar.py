@@ -303,8 +303,8 @@ class Parfile(object):
             pmbeta = self.PMBETA["value"] / 1000 / 3600 / 365.25 / 86400
             new_beta = self.BETA["value"] + pmbeta * diff_epoch
             self.BETA["value"] = new_beta
-            pmlambda = self.PMLAMBDA / 1000 / 3600 / 365.25 / 86400
-            new_lambda = self.LAMBDA + pmlambda * diff_epoch
+            pmlambda = self.PMLAMBDA["value"] / 1000 / 3600 / 365.25 / 86400
+            new_lambda = self.LAMBDA["value"] + pmlambda * diff_epoch
             self.LAMBDA["value"] = new_lambda
 
         # rotate spin parameters.
@@ -454,9 +454,10 @@ class Parfile(object):
 
             # if PBDOT is set, then rotate PB.
             if self.PBDOT["value"] is not None:
-                pbdot = getattr(self.PBDOT, "value") * 1e-12
-                new_PB = getattr(self.PB, "value") + (pbdot * diff_binary) / 86400
-                setattr(self.PB, "value", new_PB)
+                current_dict = getattr(self, "PB")
+                pbdot = self.PBDOT["value"] * 1e-12
+                current_dict["value"] = self.PB["value"] + (pbdot * diff_binary) / 86400
+                setattr(self, "PB", current_dict)
  
     def set(self, parameter: str, new_dict: dict):
         """
