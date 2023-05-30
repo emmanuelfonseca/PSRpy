@@ -193,7 +193,7 @@ def delay_orbit_roemer(dates, orbital_elements, xdot=0, pbdot=0, omdot=0, gamma=
         - ELL1:
     """
 
-    eccentric_orbit_models = ["BT", "DD", "DDGR"]
+    eccentric_orbit_models = ["BT", "DD", "DDGR", "Keplerian"]
 
     if (binary_model in eccentric_orbit_models):
         x, pb, ecc, om0, t0 = orbital_elements
