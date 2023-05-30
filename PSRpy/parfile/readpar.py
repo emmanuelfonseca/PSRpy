@@ -590,10 +590,20 @@ class Parfile(object):
                             length_value += sig_fig_error
                             length_name = 25 - length_value
 
-                            current_line = "{0:<{1}} {2:>.{3}{4}}  {5}\n".format(
-                                current_parameter, length_name, current_value, 
-                                length_value, current_type, current_flag
-                            )
+                            if current_parameter in config.parameter_list_exponent or length_value > 20:
+                                current_type = "e"
+                                length_value = 10
+
+                            if current_parameter in ["RAJ", "DECJ"]:
+                                current_line = "{0:<{1}} {2}  {3}  {4}\n".format(
+                                    current_parameter, 20, current_value, current_flag, current_error
+                                )
+ 
+                            else:
+                                current_line = "{0:<{1}} {2:>.{3}{4}}  {5}\n".format(
+                                    current_parameter, length_name, current_value, 
+                                    length_value, current_type, current_flag
+                                )
 
                             
                     # otherwise, just print parameter name and value
