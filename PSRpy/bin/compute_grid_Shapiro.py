@@ -133,6 +133,10 @@ parser.add_argument("--PBDOT", action="store_true", dest="fixPBDOT",
          "(This option only works if PBDOT is set in the input parfile.)'"
 )
 
+parser.add_argument("--PBDOToffset", action="store", default=0., dest="PBDOToffset", type=float,
+    help="Apply a constant value offset to PBDOT used for gridding."
+)
+
 parser.add_argument(
     "--GAMMA", action="store_true", dest="fixGAMMA", 
     help="Compute and fix GR component of GAMMA for each M2/COSI coordinate. " + 
@@ -206,6 +210,7 @@ stig_lo, stig_hi = args.STIGlimits
 theta_lo, theta_hi = args.THETAlimits
 m1_lo, m1_hi = args.M1limits
 mtot_lo, mtot_hi = args.MTOTlimits
+pbdot_offset = args.PBDOToffset
 px_lo, px_hi = args.PXlimits
 xomdot_lo, xomdot_hi = args.XOMDOTlimits
 fixOMDOT = args.fixOMDOT
@@ -242,10 +247,17 @@ if any([gridDDGR, gridDDK, gridM2MTOT, gridM1M2, gridH3STIG, gridH3H4]):
     grid_m2cosi = False
 
     if any([gridDDGR, gridM2MTOT]):
-        x_label = "MTOT"
-        y_label = "M2"
-        x = np.linspace(mtot_lo, mtot_hi, num=Ngrid)
-        y = np.linspace(m2_lo, m2_hi, num=Ngrid)
+        if gridM1M2:
+            x_label = "M1"
+            y_label = "M2"
+            x = np.linspace(m1_lo, m1_hi, num=Ngrid)
+            y = np.linspace(m2_lo, m2_hi, num=Ngrid)
+
+        else:
+            x_label = "MTOT"
+            y_label = "M2"
+            x = np.linspace(mtot_lo, mtot_hi, num=Ngrid)
+            y = np.linspace(m2_lo, m2_hi, num=Ngrid)
     
     elif gridDDK:
         x_label = r"\cos i"
@@ -448,13 +460,13 @@ if fixPBDOT:
     # check if input parfile has an PBDOT.
     if input_par.PBDOT["value"] is not None and fixPX:
         print("    * fixing PBDOT to GR+kinematic value (best-fit PBDOT = {0:.5f} * 1e-12)".format(
-                input_par.PBDOT["value"]
+                input_par.PBDOT["value"] - pbdot_offset
             )
         )
 
     elif hasattr(input_par, "PBDOT"):
         print("    * fixing PBDOT to GR value (best-fit PBDOT = {0:.5f} * 1e-12)".format(
-                input_par.PBDOT
+                input_par.PBDOT["value"] - pbdot_offset
             )
         )
 
@@ -540,7 +552,12 @@ for x_elem in x:
         shapmax_elem = -np.log(1 - sini_elem)
 
     elif gridDDGR or gridM2MTOT:
-        mtot_elem = x_elem
+
+        if gridM1M2:
+            m1_elem = x_elem
+
+        else:
+            mtot_elem = x_elem
 
     elif gridM1M2:
         m1_elem = x_elem
@@ -568,14 +585,18 @@ for x_elem in x:
 
             # otherwise, set MTOT and define other parameters related to it.
             elif any([gridDDGR, gridM1M2, gridM2MTOT]):
-                new_par.set("MTOT", {"value": mtot_elem, "flag": 0})
 
                 if (gridDDGR or gridM2MTOT):
-                    m1_elem = mtot_elem - m2_elem
-                
+                    if gridM1M2:
+                        mtot_elem = m1_elem + m2_elem
+
+                    else:
+                        m1_elem = mtot_elem - m2_elem
+
                 else: 
                     mtot_elem = m1_elem + m2_elem
 
+                new_par.set("MTOT", {"value": mtot_elem, "flag": 0})
                 sini_elem = (mass_func * (m1_elem + m2_elem)**2)**(1./3.) / m2_elem
 
         # if grid is instead over KOM/KIN terms, treat those separately.
@@ -611,9 +632,15 @@ for x_elem in x:
                 m1_elem, m2_elem, orbital_period, eccentricity
             )
 
+            if useTEMPO:
+                pbdot_elem *= 1e12
+
+            else:
+                pbdot_offset *= 1e-12
+
             # if not gridding over PX/DIST, then just compute GR term and set.
             if not fixPX:
-                new_par.set("PBDOT", {"value": pbdot_elem, "flag": 0})
+                new_par.set("PBDOT", {"value": pbdot_elem - pbdot_offset, "flag": 0})
 
         # if grid is 3D, do not yet update terminal info on percent completed.
         if fixXDOT or fixPX:
