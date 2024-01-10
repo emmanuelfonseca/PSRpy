@@ -1,7 +1,8 @@
 from ..const import T_sun
 import numpy as np
+import sys
 
-def mass_function(period: float, axis_semimajor_projected: float):
+def mass_function(period: float, axis_semimajor_projected: float, period_error: float = 0., axis_semimajor_projected_error: float = 0.):
     """
     Computes Keplerian mass function, given projected size and orbital period.
 
@@ -14,20 +15,40 @@ def mass_function(period: float, axis_semimajor_projected: float):
         component of Keplerian semimajor axis, projected onto the line of sight, 
         in units of light-seconds
 
+    period_error : float, optional
+        uncertainty of the period of the orbit, in units of days
+
+    axis_semimajor_projected_error : float, optional 
+        uncertainty of the Keplerian semimajor axis projected onto the line 
+        of sight, in units of light-seconds
+
     Returns
     -------
     mass_function : float 
         Keplerian mass function, in units of solar masses
     """
 
+    # first, compute mass function.
     frequency = 2 * np.pi / period / 86400
-    mass_function = frequency**2 * axis_semimajor_projected**3 / T_sun.value
+    massfunction = frequency ** 2 * axis_semimajor_projected ** 3 / T_sun.value
 
-    return mass_function
+    # second, evaluate derivatives and compute error on mass function.
+    deriv_frequency_wrt_period = -frequency / (period * 86400)
+    deriv_massfunction_wrt_period = 2 * frequency * deriv_frequency_wrt_period *\
+        axis_semimajor_projected ** 3 / T_sun.value
+    deriv_massfunction_wrt_sma = 3 * frequency ** 2 * axis_semimajor_projected ** 2 /\
+        T_sun.value
+    massfunction_error = np.sqrt(
+        (deriv_massfunction_wrt_period * (period_error * 86400)) ** 2 + 
+        (deriv_massfunction_wrt_sma * axis_semimajor_projected_error) ** 2
+    )
+    
+    return massfunction, massfunction_error
 
 def mass_companion(period: float, axis_semimajor_projected: float, mass_pulsar: float, 
     inclination: float, initial_guess: float = 0.5, nr_attempts: int = 100, 
-    nr_tolerance: float = 1e-12):
+    nr_tolerance: float = 1e-12, period_error: float = 0., 
+    axis_semimajor_projected_error: float = 0., mc_attempts: int = 1):
     """
     Computes the companion mass from the Keplerian mass function, assuming values of 
     the pulsar mass and system inclination. This function uses a Newton-Raphson method as 
@@ -64,7 +85,8 @@ def mass_companion(period: float, axis_semimajor_projected: float, mass_pulsar: 
     """
 
     # first, compute the mass function.
-    mf = mass_function(period, axis_semimajor_projected)
+    mf, mf_err = mass_function(period, axis_semimajor_projected, 
+                               period_error, axis_semimajor_projected_error)
     si = np.sin(inclination * np.pi / 180)
 
     # define variables needed for NR method.
@@ -72,23 +94,30 @@ def mass_companion(period: float, axis_semimajor_projected: float, mass_pulsar: 
     mc_mid = initial_guess
     mc0 = initial_guess
 
+    # now define variables for MC method.
+    mass_companion = np.zeros(mc_attempts)
+    mf_mc = np.random.default_rng().normal(mf, mf_err, size=mc_attempts)
+
     # loop over desired number of attempts to perform NR calculation.
-    for idx in range(nr_attempts):
-        mass_total = mass_pulsar + mc_mid
-        func = (mc_mid * si)**3 / mass_total**2 - mf
-        func_deriv = mc_mid**2 * si**3 * (mc_mid + 3 * mass_pulsar) / mass_total**3
-        mc_mid -= func / func_deriv
+    for idx_mc in range(mc_attempts):
+        mf_current = mf_mc[idx_mc]
 
-        # if the mass value has sub-threshold accuracy, break out.
-        if np.fabs(mc_mid - mc0) < nr_tolerance:
-            mass_companion = mc_mid
-            break
+        for idx_nr in range(nr_attempts):
+            mass_total = mass_pulsar + mc_mid
+            func = (mc_mid * si)**3 / mass_total**2 - mf_current
+            func_deriv = mc_mid**2 * si**3 * (mc_mid + 3 * mass_pulsar) / mass_total**3
+            mc_mid -= func / func_deriv
 
-        # otherwise, update prior-step array and redo calculation.
-        else:
-            mc0 = mc_mid
+            # if the mass value has sub-threshold accuracy, break out.
+            if np.fabs(mc_mid - mc0) < nr_tolerance:
+                mass_companion[idx_mc] = mc_mid
+                break
 
-    return mass_companion
+            # otherwise, update prior-step array and redo calculation.
+            else:
+                mc0 = mc_mid
+
+    return np.mean(mass_companion), np.std(mass_companion)
 
 def mass_pulsar(period: float, axis_semimajor_projected: float, mass_companion: float, 
     inclination: float):
@@ -115,7 +144,7 @@ def mass_pulsar(period: float, axis_semimajor_projected: float, mass_companion: 
     """
 
     # first, compute the mass function and sine of inclination angle.
-    mf = mass_function(period, axis_semimajor_projected)
+    mf, mf_err = mass_function(period, axis_semimajor_projected)
     si = np.sin(inclination * np.pi / 180)
 
     # now use mass function to compute pulsar mass.

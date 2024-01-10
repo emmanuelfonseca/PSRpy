@@ -303,8 +303,8 @@ class Parfile(object):
             pmbeta = self.PMBETA["value"] / 1000 / 3600 / 365.25 / 86400
             new_beta = self.BETA["value"] + pmbeta * diff_epoch
             self.BETA["value"] = new_beta
-            pmlambda = self.PMLAMBDA / 1000 / 3600 / 365.25 / 86400
-            new_lambda = self.LAMBDA + pmlambda * diff_epoch
+            pmlambda = self.PMLAMBDA["value"] / 1000 / 3600 / 365.25 / 86400
+            new_lambda = self.LAMBDA["value"] + pmlambda * diff_epoch
             self.LAMBDA["value"] = new_lambda
 
         # rotate spin parameters.
@@ -454,9 +454,10 @@ class Parfile(object):
 
             # if PBDOT is set, then rotate PB.
             if self.PBDOT["value"] is not None:
-                pbdot = getattr(self.PBDOT, "value") * 1e-12
-                new_PB = getattr(self.PB, "value") + (pbdot * diff_binary) / 86400
-                setattr(self.PB, "value", new_PB)
+                current_dict = getattr(self, "PB")
+                pbdot = self.PBDOT["value"] * 1e-12
+                current_dict["value"] = self.PB["value"] + (pbdot * diff_binary) / 86400
+                setattr(self, "PB", current_dict)
  
     def set(self, parameter: str, new_dict: dict):
         """
@@ -589,10 +590,20 @@ class Parfile(object):
                             length_value += sig_fig_error
                             length_name = 25 - length_value
 
-                            current_line = "{0:<{1}} {2:>.{3}{4}}  {5}\n".format(
-                                current_parameter, length_name, current_value, 
-                                length_value, current_type, current_flag
-                            )
+                            if current_parameter in config.parameter_list_exponent or length_value > 20:
+                                current_type = "e"
+                                length_value = 10
+
+                            if current_parameter in ["RAJ", "DECJ"]:
+                                current_line = "{0:<{1}} {2}  {3}  {4}\n".format(
+                                    current_parameter, 20, current_value, current_flag, current_error
+                                )
+ 
+                            else:
+                                current_line = "{0:<{1}} {2:>.{3}{4}}  {5}\n".format(
+                                    current_parameter, length_name, current_value, 
+                                    length_value, current_type, current_flag
+                                )
 
                             
                     # otherwise, just print parameter name and value

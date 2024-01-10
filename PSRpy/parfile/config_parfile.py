@@ -50,6 +50,7 @@ parameter_list_orbit_derivatives = \
     ["EDOT"] + ["EDOT{0}".format(str(num)) for num in range(2, n_derivatives_orbit)] +\
     ["OMDOT"] + ["OMDOT{0}".format(str(num)) for num in range(2, n_derivatives_orbit)] +\
     ["FB{0}".format(str(num)) for num in range(1, n_derivatives_orbit)] +\
+    ["EPS1DOT", "EPS2DOT"] +\
     ["A1DOT", "ECCDOT", "PBDOT"] # to my knowledge, only PBDOT is defined in TEMPO/TEMPO2/PINT.
 
 parameter_list_orbit_BTX = []
