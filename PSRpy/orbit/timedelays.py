@@ -133,6 +133,27 @@ def delay_orbit_annual_parallax(x, pb, ecc, om, t0, epoch, incl, asc, ecl_b, ecl
     # now, return.
     return delay
 
+def delay_orbit_correction_BT(dates, orbital_elements, xdot=0, pbdot=0, omdot=0, gamma=0, 
+    eps1dot=0, eps2dot=0, m1=0, m2=0, dtheta=0, tolerance=1e-12, binary_model="DD", 
+    orbital_phase=False):
+
+    # first, compute Keplerian term.
+    x, pb, ecc, om0, t0 = orbital_elements
+    ma = anomaly_mean(dates, pb, t0, pbdot=(pbdot * 1e-12))
+    ea = anomaly_eccentric(ma, ecc, nr_tolerance=tolerance)
+    om = argument_periastron(dates, om0, pb, ecc, t0, pbdot=pbdot, omdot=omdot,
+                               binary_model=binary_model, nr_tolerance=tolerance)
+    se, ce = np.sin(ea * d2r), np.cos(ea * d2r)
+    so, co = np.sin(om * d2r), np.cos(om * d2r)
+    alpha = (x + (xdot * 1e-12) * (dates - t0)) * so
+    beta = np.sqrt(1 - ecc**2) * (x + (xdot * 1e-12) * (dates - t0)) * co
+    delay = alpha * (ce - ecc) + (beta + gamma) * se
+
+    # next, compute second-order correction term.
+    delay_corr = (alpha * se - beta * ce) * delay / ((pb * 86400) / 2 / np.pi) / (1 - ecc * ce)
+
+    return delay_corr
+
 def delay_orbit_roemer(dates, orbital_elements, xdot=0, pbdot=0, omdot=0, gamma=0, 
     eps1dot=0, eps2dot=0, m1=0, m2=0, dtheta=0, tolerance=1e-12, binary_model="DD", 
     orbital_phase=False):
