@@ -339,17 +339,19 @@ else:
     sys.exit("ERROR: parfile must have PSR or PSRJ set!")
 
 # extract Keplerian elements, compute mass function.
-eccentricity = input_par.E["value"]
 orbital_period = input_par.PB["value"]
 semimajor_axis = input_par.A1["value"]
-mass_func = masses.mass_function(orbital_period, semimajor_axis)
+eccentricity = input_par.E["value"]
+periastron = input_par.OM["value"]
+
+if input_par.BINARY["value"] == "ELL1":
+    eccentricity = np.sqrt(input_par.EPS1["value"] ** 2 + input_par.EPS2["value"] ** 2)
+    periastron = np.arctan2(input_par.EPS1["value"], input_par.EPS2["value"]) * 180 / np.pi % 360
+
+mass_func, _ = masses.mass_function(orbital_period, semimajor_axis)
 
 if eccentricity is None:
-    if input_par.EPS1["value"] is not None and input_par.EPS2["value"] is not None:
-        eccentricity = np.sqrt(input_par.EPS1["value"]**2 + input_par.EPS2["value"]**2)
- 
-    else:
-        sys.exit("ERROR: input parfile seems to have incomplete binary model?")
+    sys.exit("ERROR: input parfile seems to have incomplete binary model?")
 
 # extract position info and compute converted Galactic coordinates.
 longitude = None
@@ -366,6 +368,12 @@ if input_par.RAJ["value"] is not None and input_par.DECJ["value"] is not None:
 elif input_par.LAMBDA["value"] is not None and input_par.BETA["value"] is not None:
     latitude = input_par.BETA["value"]
     longitude = input_par.LAMBDA["value"]
+    units = (u.deg, u.deg)
+    frame = "barycentrictrueecliptic"
+
+elif input_par.ELONG["value"] is not None and input_par.ELAT["value"] is not None:
+    latitude = input_par.ELAT["value"]
+    longitude = input_par.ELONG["value"]
     units = (u.deg, u.deg)
     frame = "barycentrictrueecliptic"
 
@@ -615,8 +623,16 @@ for x_elem in x:
                 m1_elem, m2_elem, orbital_period, eccentricity, use_PK2=use_PK2
             )
 
-            if fixOMDOT:
+            if fixOMDOT and input_par.BINARY["value"] != "ELL1":
                 new_par.set("OMDOT", {"value": omdot_elem, "flag": 0})
+
+            elif fixOMDOT and input_par.BINARY["value"] == "ELL1":
+                eps1dot_elem = eccentricity * (omdot_elem * np.pi / 180 / 365.25 / 86400) * 1e12
+                eps1dot_elem *= np.cos(periastron * np.pi / 180)
+                eps2dot_elem = -eccentricity * (omdot_elem * np.pi / 180 / 365.25 / 86400) * 1e12
+                eps2dot_elem *= np.sin(periastron * np.pi / 180)
+                new_par.set("EPS1DOT", {"value": eps1dot_elem, "flag": 0})
+                new_par.set("EPS2DOT", {"value": eps2dot_elem, "flag": 0})
 
         # the following is for GAMMA.
         if fixGAMMA:
