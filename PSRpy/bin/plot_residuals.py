@@ -150,7 +150,7 @@ if len(labels) != 0:
         current_idx = np.where(labels == current_label)
         current_toas = (toa_data["toas"])[current_idx]
         current_residuals = (toa_data["residuals"])[current_idx] * 1e6
-        current_residuals_err = (toa_data["toa_uncertainties"])[current_idx] 
+        current_residuals_err = (toa_data["toa_uncertainties"])[current_idx] / 1
 
         if time_in_years:
             x_axis_label = "Year"
@@ -165,7 +165,8 @@ if len(labels) != 0:
                 label=current_label
             )
 
-            axs[0].set_ylabel(r"$\mathcal{R}$ ($\mu$s)", fontproperties=font)
+            axs[0].set_ylabel(r"$\mathcal{R}$ (ms)", fontproperties=font)
+            #axs[0].set_ylabel("Best-fit Timing Residuals (ms)", fontproperties=font)
 
             # now set optional features if desired.
             if use_grid:
@@ -180,11 +181,13 @@ if len(labels) != 0:
                 current_residuals,
                 yerr=current_residuals_err,
                 fmt='+',
+                color="r",
                 label=current_label
             )
 
             axs.set_xlabel(x_axis_label, fontproperties=font)
             axs.set_ylabel(r"$\mathcal{R}$ ($\mu$s)", fontproperties=font)
+            #axs.set_ylabel("Best-fit Timing Residuals (ms)", fontproperties=font)
 
             # now set optional features if desired.
             if use_grid:
@@ -229,8 +232,9 @@ if (dmx_file is not None and n_panels == 2):
         axs[1].grid(linestyle="--")
 
 # save plot to file if desired.
-if (save_plot):
-    plt.savefig("{0}.pdf".format(save_filename), fmt="pdf")
-
 plt.tight_layout()
+
+if save_plot:
+    plt.savefig("{0}.jpg".format(save_filename), dpi=250)
+
 plt.show()
