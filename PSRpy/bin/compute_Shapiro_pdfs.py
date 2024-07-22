@@ -5,6 +5,7 @@ from scipy.stats import chi2
 from matplotlib.font_manager import FontProperties
 from matplotlib import gridspec
 import matplotlib.pyplot as plt
+import PSRpy.orbit as orb
 import numpy as np
 import argparse
 import pickle
@@ -29,6 +30,7 @@ parser.add_argument('--H3ci', nargs=3, type=float, default=[0., 0., 0.], metavar
 parser.add_argument('--H4ci', nargs=3, type=float, default=[0., 0., 0.], metavar=('lower', 'median', 'upper'), action='store', dest='H4confints', help='median and confidence interval for H4; used for plots only. ')
 parser.add_argument('--STIGci', nargs=3, type=float, default=[0., 0., 0.], metavar=('lower', 'median', 'upper'), action='store', dest='STIGconfints', help='median and confidence interval for STIG; used for plots only. ')
 parser.add_argument('--M2prior', nargs=2, type=float, default=[0., 0.], metavar=('mean', 'sigma'), action='store', dest='M2priorint', help='Mean and standard deviation for prior on M2; assumed to be Gaussian.')
+parser.add_argument('--INCLprior', nargs=2, type=float, default=[0., 0.], metavar=('mean', 'sigma'), action='store', dest='INCLpriorint', help='Mean and standard deviation for prior on INCL; assumed to be Gaussian.')
 parser.add_argument('--overplotFile', nargs=1, type=str, default=[None], action='store', dest='overplotFile', help="a Python pickle file containing posterior PDFs to be overplotted with results derived in current execution.")
 parser.add_argument('-i', action='store_true', dest='info_only', help='only print info from input grid files.')
 parser.add_argument('-n', nargs=1, metavar='num', type=int, default=[100], action='store', dest='N_iter', help='number of M2-COSI/M1 grid points to generate from interpolated grid. (Default = 100)')
@@ -50,6 +52,7 @@ h3_confints = args.H3confints
 h4_confints = args.H4confints
 stig_confints = args.STIGconfints
 m2_priorint = args.M2priorint
+incl_priorint = args.INCLpriorint
 overplotFile, = args.overplotFile
 
 # read in grid data written using the output format from 
@@ -860,6 +863,22 @@ if all(m2_priorint):
     prior2D_m2cosi_exp = np.exp(-0.5 * (m2_prior - m2_priorint[0])**2 / (m2_priorint[1])**2)
     pdf2D_m2cosi_exp *= np.transpose(prior2D_m2cosi_exp)
 
+if all(incl_priorint):
+    prior_m2cosi_exp = np.zeros((n_iter, n_iter))
+    m2_prior, cosi_prior = np.meshgrid(m2_exp, cosi_exp)
+    cosi_prior_median = np.cos(incl_priorint[0] * np.pi / 180)
+    cosi_prior_error = np.sin(incl_priorint[0] * np.pi / 180) * (incl_priorint[1] * np.pi / 180)
+    cosi_jacobian = 1 / np.sin(cosi_prior)
+    print(f"apply COSI prior of centered on {cosi_prior_median} +/- {cosi_prior_error}")
+
+    prior2D_m2cosi_exp = np.exp(-0.5 * ((cosi_prior - cosi_prior_median) / cosi_prior_error) ** 2) * cosi_jacobian
+    plt.pcolormesh(m2_exp, cosi_exp, pdf2D_m2cosi_exp.T, cmap="Blues")
+    plt.savefig("test1.jpg", dpi=250)
+    pdf2D_m2cosi_exp *= np.transpose(prior2D_m2cosi_exp)
+    plt.pcolormesh(m2_exp, cosi_exp, prior2D_m2cosi_exp, cmap="Blues")
+    plt.savefig("test2.jpg", dpi=250)
+    #sys.exit()
+
 area_m2cosi = np.sum(pdf2D_m2cosi_exp)
 max_m2cosi = np.max(pdf2D_m2cosi_exp)
 pdf2D_m2cosi_exp = pdf2D_m2cosi_exp / max_m2cosi * 0.5 
@@ -989,6 +1008,7 @@ if ('THETA' in GridDict):
 
 #m1lim = np.sqrt(mf / np.sqrt(1 - cosi_exp**2)**3)
 
+# finally, plot things up.
 fig = plt.figure(2)
 fig.set_figheight(6)
 fig.set_figwidth(width)
