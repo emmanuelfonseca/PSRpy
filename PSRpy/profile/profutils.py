@@ -39,7 +39,7 @@ def smooth_wavelet1D(indat, wave='sym8', nlevel=5, ncycle=10, threshtype='hard')
         # reconstruct data.
         data = data + np.roll(pywt.waverec(coeffs,wave),-m)   
   
-    return data / np.float(ncycle)
+    return data / float(ncycle)
 
 def smooth_wavelet2D(indat, wave='sym8', nlevel=5, ncycle=10, threshtype='hard'):
     """
@@ -83,7 +83,7 @@ def smooth_wavelet2D(indat, wave='sym8', nlevel=5, ncycle=10, threshtype='hard')
             # reconstruct data.
             data = data + np.roll(pywt.waverec(coeffs,wave),-m)
         # save averaged profile.
-        outdat[:,i] = data/np.float(ncycle)
+        outdat[:,i] = data/float(ncycle)
 
     # return smoothed portrait.
     return outdat

@@ -9,6 +9,7 @@ n_derivatives_DM = 10
 n_derivatives_FD = 10
 n_orbits_BTX = 5
 n_bins_DMX = 1000
+n_glitch = 9
 
 # list of astrometric parameters.
 parameter_list_astrometry = ["RA", "DEC", "RAJ", "DECJ", "PMRA", "PMDEC"] +\
@@ -19,6 +20,14 @@ parameter_list_astrometry = ["RA", "DEC", "RAJ", "DECJ", "PMRA", "PMDEC"] +\
 # list of spin-frequency derivatives.
 parameter_list_spin = ["F{0}".format(str(num)) for num in range(n_derivatives_spin)]
 parameter_list_spin += ["P{0}".format(str(num)) for num in range(n_derivatives_spin)]
+
+# list of glitch parameters.
+parameter_list_glitch = ["GLEP_{0}".format(str(num+1)) for num in range(n_glitch)]
+parameter_list_glitch += ["GLPH_{0}".format(str(num+1)) for num in range(n_glitch)]
+parameter_list_glitch += ["GLF0_{0}".format(str(num+1)) for num in range(n_glitch)]
+parameter_list_glitch += ["GLF1_{0}".format(str(num+1)) for num in range(n_glitch)]
+parameter_list_glitch += ["GLTD_{0}".format(str(num+1)) for num in range(n_glitch)]
+parameter_list_glitch += ["GLF0D_{0}".format(str(num+1)) for num in range(n_glitch)]
 
 # lst of DM parameters.
 parameter_list_DM = ["DM"] +\
@@ -81,7 +90,8 @@ parameter_list_rednoise = ["RNAMP", "RNIDX"]
 # list of all parameters defined above.
 parameter_list_full = \
     parameter_list_string + parameter_list_int +\
-    parameter_list_astrometry + parameter_list_spin + parameter_list_DM + \
+    parameter_list_astrometry + parameter_list_spin + parameter_list_DM +\
+    parameter_list_glitch +\
     parameter_list_DMX + parameter_list_FD + parameter_list_orbit_Kepler +\
     parameter_list_orbit_BTX + parameter_list_epoch + parameter_list_orbit_derivatives +\
     parameter_list_orbit_PK + parameter_list_orbit_DDK + parameter_list_orbit_DDGR +\

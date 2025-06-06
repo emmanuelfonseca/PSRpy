@@ -74,7 +74,7 @@ class DerivePar():
             (inobj.PMLAMBDA*inobj.PMLAMBDAerr)**2)/self.mu)
         # derive distance from PX, if PX is not equal to zero.
         if (hasattr(inobj,'PX')):
-            if (np.float(inobj.PX) != 0.):
+            if (float(inobj.PX) != 0.):
                 setattr(self,'dist',1/inobj.PX)
             if (hasattr(inobj,'PXerr')):
                 setattr(self,'disterr',inobj.PXerr/inobj.PX**2)
@@ -133,5 +133,5 @@ class DerivePar():
             # compute total mass from OMDOT, if it's there.
             # this assumes that the OMDOT is due to GR.
             if (hasattr(inobj, 'OMDOT') and getattr(inobj, 'OMDOT') > 0):
-                omdot = np.float(inobj.OMDOT) * np.pi / 180. / 365.25 / 86400.
-                mtot_omdot = (omdot * (1 - np.float(ecc)**2) / (3. * T_sun**(2./3.)) / (np.float(pb) / (2. * np.pi))**(-5./3.))**(3./2.)
+                omdot = float(inobj.OMDOT) * np.pi / 180. / 365.25 / 86400.
+                mtot_omdot = (omdot * (1 - float(ecc)**2) / (3. * T_sun**(2./3.)) / (float(pb) / (2. * np.pi))**(-5./3.))**(3./2.)

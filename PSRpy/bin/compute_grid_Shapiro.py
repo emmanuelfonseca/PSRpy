@@ -314,6 +314,10 @@ elif any([xomdot_lo, xomdot_hi]) != 0.:
     z_label = "XOMDOT"
     z = np.linspace(xomdot_lo, xomdot_hi, num=Ngrid)
 
+print("Shapiro-delay Grid Parameters:")
+print(f"  * {x_label}: {x.min()} to {x.max()}")
+print(f"  * {y_label}: {y.min()} to {y.max()}")
+
 ### set grid  parameters.
 chisq = None 
 
@@ -339,17 +343,19 @@ else:
     sys.exit("ERROR: parfile must have PSR or PSRJ set!")
 
 # extract Keplerian elements, compute mass function.
-eccentricity = input_par.E["value"]
 orbital_period = input_par.PB["value"]
 semimajor_axis = input_par.A1["value"]
-mass_func = masses.mass_function(orbital_period, semimajor_axis)
+eccentricity = input_par.E["value"]
+periastron = input_par.OM["value"]
+
+if input_par.BINARY["value"] == "ELL1":
+    eccentricity = np.sqrt(input_par.EPS1["value"] ** 2 + input_par.EPS2["value"] ** 2)
+    periastron = np.arctan2(input_par.EPS1["value"], input_par.EPS2["value"]) * 180 / np.pi % 360
+
+mass_func, _ = masses.mass_function(orbital_period, semimajor_axis)
 
 if eccentricity is None:
-    if input_par.EPS1["value"] is not None and input_par.EPS2["value"] is not None:
-        eccentricity = np.sqrt(input_par.EPS1["value"]**2 + input_par.EPS2["value"]**2)
- 
-    else:
-        sys.exit("ERROR: input parfile seems to have incomplete binary model?")
+    sys.exit("ERROR: input parfile seems to have incomplete binary model?")
 
 # extract position info and compute converted Galactic coordinates.
 longitude = None
@@ -366,6 +372,12 @@ if input_par.RAJ["value"] is not None and input_par.DECJ["value"] is not None:
 elif input_par.LAMBDA["value"] is not None and input_par.BETA["value"] is not None:
     latitude = input_par.BETA["value"]
     longitude = input_par.LAMBDA["value"]
+    units = (u.deg, u.deg)
+    frame = "barycentrictrueecliptic"
+
+elif input_par.ELONG["value"] is not None and input_par.ELAT["value"] is not None:
+    latitude = input_par.ELAT["value"]
+    longitude = input_par.ELONG["value"]
     units = (u.deg, u.deg)
     frame = "barycentrictrueecliptic"
 
@@ -596,8 +608,14 @@ for x_elem in x:
                 else: 
                     mtot_elem = m1_elem + m2_elem
 
-                new_par.set("MTOT", {"value": mtot_elem, "flag": 0})
+                # if input model is DD then instead set sini.
                 sini_elem = (mass_func * (m1_elem + m2_elem)**2)**(1./3.) / m2_elem
+
+                if input_par.BINARY["value"] == "DD":
+                    new_par.set("SINI", {"value": sini_elem, "flag": 0})
+
+                else:
+                    new_par.set("MTOT", {"value": mtot_elem, "flag": 0})
 
         # if grid is instead over KOM/KIN terms, treat those separately.
         elif gridDDK:
@@ -615,8 +633,16 @@ for x_elem in x:
                 m1_elem, m2_elem, orbital_period, eccentricity, use_PK2=use_PK2
             )
 
-            if fixOMDOT:
+            if fixOMDOT and input_par.BINARY["value"] != "ELL1":
                 new_par.set("OMDOT", {"value": omdot_elem, "flag": 0})
+
+            elif fixOMDOT and input_par.BINARY["value"] == "ELL1":
+                eps1dot_elem = eccentricity * (omdot_elem * np.pi / 180 / 365.25 / 86400) * 1e12
+                eps1dot_elem *= np.cos(periastron * np.pi / 180)
+                eps2dot_elem = -eccentricity * (omdot_elem * np.pi / 180 / 365.25 / 86400) * 1e12
+                eps2dot_elem *= np.sin(periastron * np.pi / 180)
+                new_par.set("EPS1DOT", {"value": eps1dot_elem, "flag": 0})
+                new_par.set("EPS2DOT", {"value": eps2dot_elem, "flag": 0})
 
         # the following is for GAMMA.
         if fixGAMMA:
@@ -739,7 +765,7 @@ for x_elem in x:
                     line = out3.split()
                     if (c1 == 0 and c2 == 0 and c4 == 0):
                         num_degrees_of_freedom = float(line[2])
-                    chisq[c1,c2, c4] = np.float(line[1]) * np.float(line[2])
+                    chisq[c1,c2, c4] = float(line[1]) * float(line[2])
                     c4 += 1
 
                 count_3D += 1
@@ -773,7 +799,7 @@ for x_elem in x:
                 out3, err3 = p3.communicate()
                 line = out3.split()
                 if (c1 == 0 and c2 == 0):
-                    nfree = np.float(line[2])
+                    nfree = float(line[2])
                 chisq[c1,c2] = float(line[1]) * float(line[2])
                 if (chisq[c1, c2] < chisq_min):
                     chisq_min = chisq[c1, c2]
@@ -821,21 +847,21 @@ if z is not None:
     plt.colorbar()
     plt.xlabel(x_label, fontproperties=font, fontsize=15)
     plt.ylabel(y_label, fontproperties=font, fontsize=15)
-    plt.savefig(outf_contour_xy, fmt="png")
+    plt.savefig(outf_contour_xy, bbox_inches="tight", dpi=250, format="jpg")
     plt.clf()
 
     plt.pcolormesh(x, z, pdf2D_xz, vmin=0, vmax=np.max(pdf2D_xz), cmap="Blues", shading="auto")
     plt.colorbar()
     plt.xlabel(x_label, fontproperties=font, fontsize=15)
     plt.ylabel(z_label, fontproperties=font, fontsize=15)
-    plt.savefig(outf_contour_xz, fmt="png")
+    plt.savefig(outf_contour_xz, bbox_inches="tight", dpi=250, format="jpg")
     plt.clf()
 
     plt.pcolormesh(y, z, pdf2D_yz, vmin=0, vmax=np.max(pdf2D_yz), cmap="Blues", shading="auto")
     plt.colorbar()
     plt.xlabel(y_label, fontproperties=font, fontsize=15)
     plt.ylabel(z_label, fontproperties=font, fontsize=15)
-    plt.savefig(outf_contour_yz, fmt="png")
+    plt.savefig(outf_contour_yz, bbox_inches="tight", dpi=250, format="jpg")
 
 else:
     deltachi2 = chisq - np.min(chisq)
@@ -851,7 +877,7 @@ else:
     plt.colorbar()
     plt.xlabel(x_label, fontproperties=font, fontsize=15)
     plt.ylabel(y_label, fontproperties=font, fontsize=15)
-    plt.savefig(outf_contour, fmt="png")
+    plt.savefig(outf_contour, bbox_inches="tight", dpi=250, format="jpg")
 
 ### finally, load data dictionary and write to file.
 GridDict = {}

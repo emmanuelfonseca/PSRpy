@@ -42,8 +42,8 @@ class ReadFits(object):
         data  = hdulist['SUBINT'].data['DATA']
         scale = hdulist['SUBINT'].data['DAT_SCL']
         offset = hdulist['SUBINT'].data['DAT_OFFS']
-        setattr(self, 'scale', np.array(scale, dtype=np.float32))
-        setattr(self, 'offset', np.array(offset, dtype=np.float32))
+        setattr(self, 'scale', np.array(scale, dtype=float32))
+        setattr(self, 'offset', np.array(offset, dtype=float32))
         setattr(self, 'channel_freqs', np.array((hdulist['SUBINT'].data['DAT_FREQ'])[0, :]))
         setattr(self, 'n_ints', len(data[:, 0, 0 ,0]))
         setattr(self, 'n_bins', hdulist['SUBINT'].header['NBIN'])
@@ -53,7 +53,7 @@ class ReadFits(object):
         setattr(self, 'signint', hdulist['SUBINT'].header['SIGNINT'])
         setattr(self, 'dm', hdulist['SUBINT'].header['DM'])
 
-        setattr(self, 'data', np.array(data, dtype=np.float))
+        setattr(self, 'data', np.array(data, dtype=float))
 
     def info(self):
         """
@@ -122,7 +122,7 @@ class ReadFits(object):
         Removes non-zero baseline, such that off-pulse RMS intensity is zero.
         """
         
-        pulse_phase = np.linspace(0, self.n_bins-1, num=self.n_bins) / np.float(self.n_bins)
+        pulse_phase = np.linspace(0, self.n_bins-1, num=self.n_bins) / float(self.n_bins)
         bl_idx = np.where(np.logical_and(pulse_phase >= phase_range[0], pulse_phase <= phase_range[1]))[0]
 
         for pol in range(self.n_pol):
@@ -269,4 +269,4 @@ class ReadFits(object):
                     full_sum_profiles[:, pol] += self.data[subint, pol, freq, :] 
 
 
-        return full_sum_profiles / np.float(self.n_chan * self.n_ints)
+        return full_sum_profiles / float(self.n_chan * self.n_ints)

@@ -1,10 +1,11 @@
 #! /usr/bin/python
 
-from scipy.interpolate import interp1d, interp2d, griddata
+from scipy.interpolate import interp1d, RegularGridInterpolator, griddata
 from scipy.stats import chi2
 from matplotlib.font_manager import FontProperties
 from matplotlib import gridspec
 import matplotlib.pyplot as plt
+import PSRpy.orbit as orb
 import numpy as np
 import argparse
 import pickle
@@ -29,6 +30,7 @@ parser.add_argument('--H3ci', nargs=3, type=float, default=[0., 0., 0.], metavar
 parser.add_argument('--H4ci', nargs=3, type=float, default=[0., 0., 0.], metavar=('lower', 'median', 'upper'), action='store', dest='H4confints', help='median and confidence interval for H4; used for plots only. ')
 parser.add_argument('--STIGci', nargs=3, type=float, default=[0., 0., 0.], metavar=('lower', 'median', 'upper'), action='store', dest='STIGconfints', help='median and confidence interval for STIG; used for plots only. ')
 parser.add_argument('--M2prior', nargs=2, type=float, default=[0., 0.], metavar=('mean', 'sigma'), action='store', dest='M2priorint', help='Mean and standard deviation for prior on M2; assumed to be Gaussian.')
+parser.add_argument('--INCLprior', nargs=2, type=float, default=[0., 0.], metavar=('mean', 'sigma'), action='store', dest='INCLpriorint', help='Mean and standard deviation for prior on INCL; assumed to be Gaussian.')
 parser.add_argument('--overplotFile', nargs=1, type=str, default=[None], action='store', dest='overplotFile', help="a Python pickle file containing posterior PDFs to be overplotted with results derived in current execution.")
 parser.add_argument('-i', action='store_true', dest='info_only', help='only print info from input grid files.')
 parser.add_argument('-n', nargs=1, metavar='num', type=int, default=[100], action='store', dest='N_iter', help='number of M2-COSI/M1 grid points to generate from interpolated grid. (Default = 100)')
@@ -50,6 +52,7 @@ h3_confints = args.H3confints
 h4_confints = args.H4confints
 stig_confints = args.STIGconfints
 m2_priorint = args.M2priorint
+incl_priorint = args.INCLpriorint
 overplotFile, = args.overplotFile
 
 # read in grid data written using the output format from 
@@ -293,7 +296,7 @@ if ('H3' in GridDict and 'H4' in GridDict):
     pdf2D_h3h4 = 0.5 * np.exp(-0.5 * deltachi2_h3h4)
     pdf2D_h3h4_area = np.sum(pdf2D_h3h4)
     pdf2D_h3h4 /= pdf2D_h3h4_area
-    pdf2D_h3h4_interpol = interp2d(h4_1D, h3_1D, pdf2D_h3h4)
+    pdf2D_h3h4_interpol = RegularGridInterpolator((h4_1D, h3_1D), pdf2D_h3h4)
 
     h3_exp = np.linspace(min(h3_1D), max(h3_1D), num=n_iter)
     h4_exp = np.linspace(min(h4_1D), max(h4_1D), num=n_iter)
@@ -492,7 +495,7 @@ if ('H3' in GridDict and 'STIG' in GridDict):
 
     pdf2D_h3stig_area = np.sum(pdf2D_h3stig)
     pdf2D_h3stig /= pdf2D_h3stig_area
-    pdf2D_h3stig_interpol = interp2d(stig_1D, h3_1D, pdf2D_h3stig)
+    pdf2D_h3stig_interpol = RegularGridInterpolator((stig_1D, h3_1D), pdf2D_h3stig)
 
     h3_exp = np.linspace(min(h3_1D), max(h3_1D), num=n_iter)
     stig_exp = np.linspace(min(stig_1D), max(stig_1D), num=n_iter)
@@ -606,7 +609,7 @@ if ('H3' in GridDict and 'STIG' in GridDict):
         min_KOM, max_KOM = np.min(kom_1D), np.max(kom_1D)
         min_STIG, max_STIG = np.min(stig_exp), np.max(stig_exp)
 
-        pdf2D_komstig_int = interp2d(stig_1D, kom_1D, pdf2D_komstig)
+        pdf2D_komstig_int = RegularGridInterpolator((stig_1D, kom_1D), pdf2D_komstig)
         pdf2D_komstig_exp = np.zeros((n_iter, n_iter))
         pdf2D_komcosi_mid = np.zeros((n_iter, n_iter))
 
@@ -751,7 +754,7 @@ elif ("M2" in GridDict and "COSI" in GridDict):
             # now compute interolated grids for M2-PX.
             pdf2D_current = np.sum(pdf3D, axis=1)
             pdf2D_current /= np.sum(pdf2D_current)
-            pdf2D_interpol = interp2d(px_1D, m2_1D, pdf2D_current)
+            pdf2D_interpol = RegularGridInterpolator((px_1D, m2_1D), pdf2D_current)
 
             print("Computing 2D PDF for PX/DIST-M2...")
             for idx_px in range(n_iter):
@@ -766,7 +769,7 @@ elif ("M2" in GridDict and "COSI" in GridDict):
             # now compute interolated grids for COSI-PX.
             pdf2D_current = np.sum(pdf3D, axis=0)
             pdf2D_current /= np.sum(pdf2D_current)
-            pdf2D_interpol = interp2d(px_1D, cosi_1D, pdf2D_current)
+            pdf2D_interpol = RegularGridInterpolator((px_1D, cosi_1D), pdf2D_current)
 
             print("Computing 2D PDF for PX/DIST-COSI...")
             for idx_px in range(n_iter):
@@ -792,7 +795,7 @@ elif ("M2" in GridDict and "COSI" in GridDict):
             # then I extract the marginalized M1-PX grid and interpolate it.
             pdf2D_current = np.sum(pdf3D_m1cosipx, axis=1)
             pdf2D_current /= np.sum(pdf2D_current)
-            pdf2D_interpol = interp2d(px_1D, m1_1D, pdf2D_current)
+            pdf2D_interpol = RegularGridInterpolator((px_1D, m1_1D), pdf2D_current)
 
             print("Computing 2D PDF for PX-M1...")
             for idx_px in range(n_iter):
@@ -817,7 +820,7 @@ elif ("M2" in GridDict and "COSI" in GridDict):
                 for jj in range(len(kom_1D)):
                     pdf2D_m2kom[ii, jj] = np.sum(pdf3D[ii, :, jj])
 
-            pdf2D_interpol = interp2d(cosi_1D, kom_1D, pdf2D_komcosi)
+            pdf2D_interpol = RegularGridInterpolator((cosi_1D, kom_1D), pdf2D_komcosi)
             min_KOM, max_KOM = np.min(kom_1D), np.max(kom_1D)
 
             for x_kom in range(n_iter):
@@ -837,7 +840,7 @@ elif ("M2" in GridDict and "COSI" in GridDict):
         pdf2D_m2cosi = np.exp(-0.5 * deltachi2_m2cosi_orig)
 
     print("Interpolating probability map...")
-    pdf2D_m2cosi_interpol = interp2d(cosi_1D, m2_1D, pdf2D_m2cosi)
+    pdf2D_m2cosi_interpol = RegularGridInterpolator((cosi_1D, m2_1D), pdf2D_m2cosi)
     print("Computing probability map with higher resolution...")
     
     # now compute high-res m2-cosi map from interpolated grid.
@@ -847,7 +850,7 @@ elif ("M2" in GridDict and "COSI" in GridDict):
         for k_cosi in range(len(cosi_exp)):
             cosi = cosi_exp[k_cosi]
             if (m2 > min_M2 and m2 < max_M2 and cosi > min_COSI and cosi < max_COSI):
-                pdf2D_m2cosi_exp[k_m2, k_cosi] = pdf2D_m2cosi_interpol(cosi, m2)
+                pdf2D_m2cosi_exp[k_m2, k_cosi] = pdf2D_m2cosi_interpol((cosi, m2))
             else: 
                 continue
 
@@ -859,6 +862,22 @@ if all(m2_priorint):
     m2_prior, cosi_prior = np.meshgrid(m2_exp, cosi_exp)
     prior2D_m2cosi_exp = np.exp(-0.5 * (m2_prior - m2_priorint[0])**2 / (m2_priorint[1])**2)
     pdf2D_m2cosi_exp *= np.transpose(prior2D_m2cosi_exp)
+
+if all(incl_priorint):
+    prior_m2cosi_exp = np.zeros((n_iter, n_iter))
+    m2_prior, cosi_prior = np.meshgrid(m2_exp, cosi_exp)
+    cosi_prior_median = np.cos(incl_priorint[0] * np.pi / 180)
+    cosi_prior_error = np.sin(incl_priorint[0] * np.pi / 180) * (incl_priorint[1] * np.pi / 180)
+    cosi_jacobian = 1 / np.sin(cosi_prior)
+    print(f"apply COSI prior of centered on {cosi_prior_median} +/- {cosi_prior_error}")
+
+    prior2D_m2cosi_exp = np.exp(-0.5 * ((cosi_prior - cosi_prior_median) / cosi_prior_error) ** 2) * cosi_jacobian
+    plt.pcolormesh(m2_exp, cosi_exp, pdf2D_m2cosi_exp.T, cmap="Blues")
+    plt.savefig("test1.jpg", dpi=250)
+    pdf2D_m2cosi_exp *= np.transpose(prior2D_m2cosi_exp)
+    plt.pcolormesh(m2_exp, cosi_exp, prior2D_m2cosi_exp, cmap="Blues")
+    plt.savefig("test2.jpg", dpi=250)
+    #sys.exit()
 
 area_m2cosi = np.sum(pdf2D_m2cosi_exp)
 max_m2cosi = np.max(pdf2D_m2cosi_exp)
@@ -989,6 +1008,7 @@ if ('THETA' in GridDict):
 
 #m1lim = np.sqrt(mf / np.sqrt(1 - cosi_exp**2)**3)
 
+# finally, plot things up.
 fig = plt.figure(2)
 fig.set_figheight(6)
 fig.set_figwidth(width)

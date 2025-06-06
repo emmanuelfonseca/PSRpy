@@ -80,7 +80,7 @@ class TempoMCMC():
         output, error = temporun.communicate()
 
         m = re.search(r'Chisqr/nfree\W+(\d+\.\d+)\W+(\d+)\W+(\d+\.\d+)', output)
-        chisq = np.float(m.group(3)) * np.float(m.group(2))
+        chisq = float(m.group(3)) * float(m.group(2))
 
         return -0.5 * chisq
 

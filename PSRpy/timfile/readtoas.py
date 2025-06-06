@@ -210,9 +210,9 @@ class Timfile(object):
                     # now parse TOA data, depending on TOA format.
                     if (self.toa_format == "tempo2"):
                         self.toa_files += [str(elems[0])]
-                        self.freqs += [np.float(elems[1])]
-                        self.toas += [np.float(elems[2])]
-                        self.toa_uncertainties += [np.float(elems[3])]
+                        self.freqs += [float(elems[1])]
+                        self.toas += [float(elems[2])]
+                        self.toa_uncertainties += [float(elems[3])]
                         self.observatory_codes += [str(elems[4])]
                         self.toa_flags += [" ".join(elems[5:])]
 
