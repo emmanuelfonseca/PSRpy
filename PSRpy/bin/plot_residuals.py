@@ -176,12 +176,12 @@ if len(labels) != 0:
                 axs[0].legend(loc="upper left", ncol=3)
 
         else:
+
             axs.errorbar(
                 current_toas,
                 current_residuals,
                 yerr=current_residuals_err,
                 fmt='+',
-                color="r",
                 label=current_label
             )
 
@@ -224,7 +224,7 @@ if (dmx_file is not None and n_panels == 2):
         color="k"
     )
 
-    axs[1].get_shared_x_axes().join(axs[0], axs[1])
+    axs[1].get_shared_x_axes().joined(axs[0], axs[1])
     axs[1].set_xlabel(x_axis_label, fontproperties=font)
     axs[1].set_ylabel(r"$\Delta$DM (10$^{-3}$ pc cm$^{-3}$)", fontproperties=font)
 
@@ -235,6 +235,6 @@ if (dmx_file is not None and n_panels == 2):
 plt.tight_layout()
 
 if save_plot:
-    plt.savefig("{0}.jpg".format(save_filename), dpi=250)
+    plt.savefig("{0}.jpg".format(save_filename), bbox_inches="tight", dpi=250, format="jpg")
 
 plt.show()
