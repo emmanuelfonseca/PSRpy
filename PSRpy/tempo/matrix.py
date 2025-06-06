@@ -94,7 +94,7 @@ class Matrix:
 
         # declare objects to be returned.
         self.parlist = []
-        self.covmat  = np.zeros((num, num), dtype=np.float64)
+        self.covmat  = np.zeros((num, num), dtype=float)
         freqder_count = 0
 
         # loop to get data from binary file.
