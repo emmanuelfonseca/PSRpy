@@ -292,10 +292,10 @@ def delay_orbit_shapiro(dates, pb, ecc, om, t0, m2, sini, pbdot=0, omdot=0):
         - time delay [s]
     """
 
-    ma = anomaly_mean(pb, dates, t0, pbdot=pbdot) 
+    ma = anomaly_mean(dates, pb, t0, pbdot=pbdot) 
     ea = anomaly_eccentric(ma, ecc) 
     ta = anomaly_true(ea, ecc) 
-    om = argument_periastron(om, pb, ecc, dates, t0, omdot=omdot) 
+    om = argument_periastron(dates, om, pb, ecc, t0, omdot=omdot) 
     se, ce = np.sin(ea * d2r), np.cos(ea * d2r)
     so, co = np.sin(om * d2r), np.cos(om * d2r)
     delay = -2 * T_sun * m2 * np.log(1 - ecc * ce - sini * ((ce - ecc) * so + se * np.sqrt(1 - ecc**2) * co))
