@@ -109,9 +109,13 @@ epoch_finish = epoch_start + (365.25 * timespan)
 mjds_campaigns = []
 
 for current_campaign_epoch in campaigns:
-    for ii in range(100):
-        current_offset = ii * (5. / 60. / 24.)
-        mjds_campaigns += [current_campaign_epoch + current_offset]
+    # assume one campaign lasts for 14 days.
+    for jj in range(14):
+
+        # and assumine that 125 min worth of data is acquired during each day of the campaign.
+        for ii in range(25):
+            current_offset = jj + ii * (5. / 60. / 24.)
+            mjds_campaigns += [current_campaign_epoch + current_offset]
 
 # now simulate data set.
 print("creating TOA set for {0} epochs...".format(n_epochs))
