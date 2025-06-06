@@ -35,18 +35,18 @@ def read_resid2(resid2_file, info_file=None):
 
     # now define list of dtypes for defining the Numpy array to hold data.
     dtype_list = [
-        ('toas', np.float),
-        ('residuals_phase', np.float),
-        ('residuals', np.float),
-        ('orbital_phase', np.float),
-        ('frequency', np.float),
-        ('weight', np.float),
-        ('toa_uncertainties', np.float),
-        ('residuals_prefit', np.float),
-        ('residuals_rednoise', np.float)
+        ('toas', float),
+        ('residuals_phase', float),
+        ('residuals', float),
+        ('orbital_phase', float),
+        ('frequency', float),
+        ('weight', float),
+        ('toa_uncertainties', float),
+        ('residuals_prefit', float),
+        ('residuals_rednoise', float)
     ]
 
     # load data into a NumPy record array.
     toa_data = np.array(resid2_list, dtype=dtype_list)
 
-    return toa_data, np.array(info_list, dtype=np.unicode_)
+    return toa_data, np.array(info_list, dtype=np.str_)
