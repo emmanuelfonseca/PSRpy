@@ -232,7 +232,7 @@ class Parfile(object):
 
                             else:
                                 jump_dict["option"] = lsplit[1]
-                                jump_dict["value"] = np.float(lsplit[3])
+                                jump_dict["value"] = float(lsplit[3])
 
                                 # if fit flag and error are present, stash those.
                                 try:
@@ -354,7 +354,7 @@ class Parfile(object):
 
             # change T0 unless specified otherwise.
             if not fix_T0:
-                n_orbits = np.int((new_epoch - old_T0) / pb)
+                n_orbits = int((new_epoch - old_T0) / pb)
                 new_T0 = old_T0 + pb * n_orbits
                 current_dict = getattr(self, time_parameter)
                 current_dict["value"] = new_T0
