@@ -2,7 +2,7 @@ from ..const import k_DM
 import astropy.units as u
 import numpy as np
 
-def dm_delay(dm, frequency1, frequency2=np.infty):
+def dm_delay(dm, frequency1, frequency2=np.inf):
     """
     Computes the time delay between frequency channels due to electromagnetic 
     dispersion, given a diserpsion measure.
