@@ -10,10 +10,10 @@ import argparse
 import sys
 
 parser = argparse.ArgumentParser(description="A script that computes the epoch(s) for which a certain orbital phase is achieved, given a TEMPO/TEMPO2 solution of a binary pulsar.")
-parser.add_argument("epoch", nargs="+", action="store", type=np.float, help="Epoch to refine for one or more orbital phases.")
+parser.add_argument("epoch", nargs="+", action="store", type=float, help="Epoch to refine for one or more orbital phases.")
 parser.add_argument("-f", nargs=1, action="store", dest="parfile", required=True, type=str, help="Input TEMPO/TEMPO2 parameter file with binary parameters set.")
 parser.add_argument("-o", nargs=1, action="store", dest="observatory", default=["GBT"], type=str, help="Name of observatory (e.g. GBT, Arecibo, CHIME, etc). Default: GBT.")
-parser.add_argument("-p", nargs="+", action="store", dest="orbital_phases", default=[0.25], type=np.float, help="One or more orbital phases (0 <= phase < 1) for which to determine epoch(s) of occurence. Default is 0.25, commonly known as superior conjunction.")
+parser.add_argument("-p", nargs="+", action="store", dest="orbital_phases", default=[0.25], type=float, help="One or more orbital phases (0 <= phase < 1) for which to determine epoch(s) of occurence. Default is 0.25, commonly known as superior conjunction.")
 
 args = parser.parse_args()
 epoch_to_refine, = args.epoch
