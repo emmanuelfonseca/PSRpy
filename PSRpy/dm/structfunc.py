@@ -21,9 +21,9 @@ def structfunc(inf,nbinsmax=20,rmbias=False):
 
   for line in file(inf):
     line = line.split()
-    mjd.append(np.float(line[0]))
-    dmx.append(np.float(line[1]))
-    err.append(np.float(line[2]))
+    mjd.append(float(line[0]))
+    dmx.append(float(line[1]))
+    err.append(float(line[2]))
     count += 1
 
   dmx, err, mjd = np.array(dmx), np.array(err), np.array(mjd)
@@ -69,7 +69,7 @@ def structfunc(inf,nbinsmax=20,rmbias=False):
         structbiaserr = rmserr[ind]
       struct.append(np.mean(dmxsq[ind])-structbias)
       bins.append(np.mean([binedge[k],binedge[k+1]]))
-      structerr.append(np.sqrt(np.sum((dmxsqerr[ind])**2+structbiaserr**2))/np.float(dmxsq[ind].size))
+      structerr.append(np.sqrt(np.sum((dmxsqerr[ind])**2+structbiaserr**2))/float(dmxsq[ind].size))
 
   bins       = np.array(bins) 
   struct     = ((2.*np.pi/1400e6/2.41e-16)**2)*np.array(struct)
