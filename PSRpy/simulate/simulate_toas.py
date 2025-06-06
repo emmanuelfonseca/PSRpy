@@ -12,25 +12,43 @@ def write_TOAs_to_file(
     n_epochs, 
     n_channels_per_epoch,
     observatory_code = "@",
-    output_file="simulated.tim"
+    output_file="simulated.tim",
+    toa_format="parkes",
 ):
     """
     Writes simulated TOA data to an ASCII file, assuming Parkes TOA format. 
     """
 
     fout = open(output_file, "w")
-    fout.write("MODE 1\n\n")
+
+    if toa_format == "tempo2":
+        fout.write("FORMAT 1\n")
+
+    fout.write("MODE 1\n")
 
     for ii in range(n_epochs):
         for jj in range(n_channels_per_epoch):
-            line = " {0:24s} {1:6.4f} {2:20.13f} {3:7.2f} {4:7.2f} {5:>8s}\n".format(
-                "fake_data.fits",
-                frequency_channels[jj],
-                toas[ii],
-                0.,
-                toa_uncertainties[ii],
-                observatory_code
-            )
+            line = ""
+
+            if toa_format == "parkes":
+                line = " {0:24s} {1:6.4f} {2:20.13f} {3:7.2f} {4:7.2f} {5:>8s}\n".format(
+                    "fake_data.fits",
+                    frequency_channels[jj],
+                    toas[ii],
+                    0.,
+                    toa_uncertainties[ii],
+                    observatory_code
+                )
+
+            elif toa_format == "tempo2":
+                line = "{0:24s} {1:6.4f} {2:20.13f} {3:7.2f} {4:>8s} -f {5}\n".format(
+                    "fake_data.fits",
+                    frequency_channels[jj],
+                    toas[ii],
+                    toa_uncertainties[ii],
+                    observatory_code,
+                    "sim",
+                )
 
             fout.write(line)
 
@@ -56,6 +74,7 @@ def simulate_TOAs(
     output_file = "simulated_toas.tim",
     rms_residual=5.,
     time_range = 365.25,
+    toa_format = "parkes",
     use_tempo=True,
     use_tempo2=False
 ):
@@ -120,19 +139,22 @@ def simulate_TOAs(
     # first, simulate rough timestamps based on configuration parameters.
     pulse_mjds = []
     subint_length = n_hours_per_epoch / n_toas_per_epoch / 24. # units in days
-    days_between_epochs = (epoch_finish - epoch_start) / n_epochs
-    current_epoch = epoch_start   
-    epoch_offsets = np.random.uniform(-jitter_epoch, jitter_epoch, n_epochs)
 
-    for ii in range(n_epochs):
-        current_subint_offset = 0
-        current_epoch_offset = epoch_offsets[ii]
+    # be carefule in case one specific (i.e., "extra") TOAs are provided.
+    if n_epochs != 0:
+        days_between_epochs = (epoch_finish - epoch_start) / n_epochs
+        current_epoch = epoch_start   
+        epoch_offsets = np.random.uniform(-jitter_epoch, jitter_epoch, n_epochs)
 
-        for jj in range(n_toas_per_epoch):
-            pulse_mjds += [current_epoch + current_subint_offset + current_epoch_offset]
-            current_subint_offset += subint_length
+        for ii in range(n_epochs):
+            current_subint_offset = 0
+            current_epoch_offset = epoch_offsets[ii]
+    
+            for jj in range(n_toas_per_epoch):
+                pulse_mjds += [current_epoch + current_subint_offset + current_epoch_offset]
+                current_subint_offset += subint_length
 
-        current_epoch += days_between_epochs
+            current_epoch += days_between_epochs
 
     # tack on specific, "extra" MJDs, if supplied.
     pulse_mjds += mjds_extra
@@ -149,7 +171,7 @@ def simulate_TOAs(
     # write original, pre-correction TOAs to a file.
     d1 = write_TOAs_to_file(pulse_mjds, toa_uncertainties, frequency_channels, n_toas_total, 
              n_channels_per_epoch, observatory_code=observatory_code, 
-             output_file="simulated_toas_orig.tim")
+             output_file="simulated_toas_orig.tim", toa_format=toa_format)
 
     # now, run tempo on these data.
     cmd = ['tempo', '-f', parfile, "simulated_toas_orig.tim"]
@@ -167,7 +189,7 @@ def simulate_TOAs(
         pulse_mjds -= corrections
         d1 = write_TOAs_to_file(pulse_mjds, toa_uncertainties, frequency_channels, 
                  n_toas_total, n_channels_per_epoch, observatory_code=observatory_code, 
-                 output_file="simulated_toas_corrected.tim")
+                 output_file="simulated_toas_corrected.tim", toa_format=toa_format)
 
         # now, run tempo on these data.
         cmd = ['tempo', '-f', parfile, "simulated_toas_corrected.tim"]
@@ -179,7 +201,7 @@ def simulate_TOAs(
 
     d1 = write_TOAs_to_file(pulse_mjds, toa_uncertainties, frequency_channels, n_toas_total, 
              n_channels_per_epoch, observatory_code=observatory_code, 
-             output_file=output_file)
+             output_file=output_file, toa_format=toa_format)
 
 
     # clean up.
